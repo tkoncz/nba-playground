@@ -8,12 +8,15 @@ base_url <- 'http://www.prosportstransactions.com/basketball/Search/SearchResult
 url <- paste(base_url, as.character(0), sep = "")
 df_injuries = readHTMLTable(url, header = T, which = 1, stringsAsFactors = F)
 
-for(i in seq(from= 25,to= 100,by= 25)) {
+# 22875
+for(i in seq(from= 25,to= 100,by= 1000)) {
   
   url <- paste(base_url, as.character(i), sep = "")
   injuries = readHTMLTable(url, header = T, which = 1, stringsAsFactors = F)
   
   df_injuries <- rbind(df_injuries, injuries)
+  print(i)
 }
 
-?seq
+injury.table <- data.table(df_injuries)
+fwrite(injury.tablem, file = "injuriesTable.csv")

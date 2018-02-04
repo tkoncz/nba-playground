@@ -1,6 +1,5 @@
 #library(rvest)
 library(data.table)
-<<<<<<< HEAD
 #library(XML)
 library(xml2)
 
@@ -22,7 +21,7 @@ html_to_table <- function(url) {
   return(table)
 }
 
-years <- c(as.character(2000:2018))
+years <- c(as.character(2001:2018))
 months <- c("september", "october", "november", "december", "january", "february",
             "march", "april", "may", "june")
 
@@ -39,6 +38,7 @@ for(y in years) {
         df_schedules <- schedules
       }
       
+      Sys.sleep(1)
       print(paste(y, m, sep= "-"))
     }
   }

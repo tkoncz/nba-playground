@@ -7,6 +7,13 @@ date_2_dateKey <- function(date_String) {
   return(date)
 }
 
+#creates game url based on dt columns
+create_game_url <- function(Date_Key, TeamCode) {
+  base_url <- "https://www.basketball-reference.com/boxscores/"
+  url <- paste(base_url, Date_Key, "0", TeamCode, ".html", sep= "")
+  return(url)
+}
+
 dt <- fread("schedulesTable.csv")
 dt_teamNameMapping <- fread("teamNameMapping.csv")
 
@@ -19,16 +26,18 @@ setnames(x = dt,
 
 setnames(x = dt_teamNameMapping,
          old = "Team.Name",
-         new = "Away.Team")
+         new = "Home.Team")
 
 dt <- merge(x=dt, y=dt_teamNameMapping, all.x=TRUE)
 #dt[, .N, keyby = .(Away.Team, Team.Code)]
 
-# dt[, Date := ]
+dt[, Date := date_2_dateKey(Date)]
+dt[, Date_Key := format(Date, "%Y%m%d")]
+
+dt[, Game.URL := create_game_url(as.character(Date_Key), Team.Code)]
 
 
-
-str(date_2_dateKey(dt[1,2]))
-
-head(dt)
-"https://www.basketball-reference.com/boxscores/201710200BRK.html"
+html <- xml2::read_html("https://www.basketball-reference.com/boxscores/201611010NOP.html")
+node <- rvest::html_nodes(html, "table")
+table <- rvest::html_table(node, header = TRUE)
+data.table(table[[1]])

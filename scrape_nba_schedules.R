@@ -1,5 +1,6 @@
 #library(rvest)
 library(data.table)
+<<<<<<< HEAD
 #library(XML)
 library(xml2)
 

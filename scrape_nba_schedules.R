@@ -1,6 +1,6 @@
 #library(rvest)
 library(data.table)
-library(XML)
+#library(XML)
 library(xml2)
 
 base_url <- "https://www.basketball-reference.com/leagues/NBA_xYYYYx_games-xmonthx.html"
@@ -13,43 +13,36 @@ complete_url <- function(year, month) {
   return(url)
 }
 
-months <- c("october", "november", "december", "january", "february",
+html_to_table <- function(url) {
+  html <- xml2::read_html(url)
+  node <- rvest::html_node(html, "table")
+  table <- rvest::html_table(node, header = TRUE)
+  
+  return(table)
+}
+
+years <- c(as.character(2000:2018))
+months <- c("september", "october", "november", "december", "january", "february",
             "march", "april", "may", "june")
 
-for(m in months) {
-  html <- xml2::read_html(complete_url("2017", m))
-  node <- rvest::html_node(html, "table")
-  table <- rvest::html_table(node, header = TRUE)  
+df_schedules <- NULL
+for(y in years) {
+  for(m in months) {
+    schedules <- NULL
+    schedules <- try(html_to_table(complete_url(y, m)), silent= TRUE)
+    
+    if(exists('schedules') && is.data.frame(get('schedules'))) {
+      if(exists('df_schedules') && is.data.frame(get('df_schedules'))) {
+        df_schedules <- rbind(df_schedules, schedules)
+      } else {
+        df_schedules <- schedules
+      }
+      
+      print(paste(y, m, sep= "-"))
+    }
+  }
 }
+rm(schedules)
 
-
-
-url <- paste(base_url, as.character(0), sep = "")
-df_injuries = readHTMLTable(url, header = T, which = 1, stringsAsFactors = F)
-
-for(i in seq(from= 25,to= 22875,by= 25)) {
-  
-  url <- paste(base_url, as.character(i), sep = "")
-  injuries = readHTMLTable(url, header = T, which = 1, stringsAsFactors = F)
-  
-  df_injuries <- rbind(df_injuries, injuries)
-  rm(injuries)
-  print(i) #tracking progress
-}
-
-# removing variables not used anymore
-rm(base_url)
-rm(url)
-rm(i)
-
-injury.table <- data.table(df_injuries)
-rm(df_injuries)
-
-head(injury.table)
-
-str_to_replace <- substring(injury.table[5, 4], 1, 2)
-
-injury.table[, Acquired := gsub(pattern = str_to_replace, replacement = "", x = Acquired)]
-injury.table[, Relinquished := gsub(pattern = str_to_replace, replacement = "", x = Relinquished)]
-
-fwrite(injury.table, file = "injuriesTable.csv")
+schedules.table <- data.table(df_schedules)
+fwrite(schedules.table, file = "schedulesTable.csv")

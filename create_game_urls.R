@@ -16,6 +16,48 @@ fun_create_game_url <- function(Date_Key, TeamCode) {
   return(url)
 }
 
+#returns a df for a html box score table
+fun_get_box_score_table <- function(df) {
+  header.Row <- df[1, -1] %>%
+    t()
+  rownames(header.Row) <- c()
+  header.Row <- rbind("Players", header.Row)
+  
+  box_score_stats <- df %>%
+    setnames(header.Row) %>%
+    filter(!Players %in% c("Starters", "Reserves"))
+  
+  return(box_score_stats)
+}
+
+fun_get_game_box_score <- function(url) {
+  html <- read_html(game_url)
+  node <- html_nodes(html, "table")
+  box_score_tables <- html_table(node, header = T)
+
+  #basic
+  away_basic_box_score_stats <- fun_get_box_score_table(box_score_tables[[1]])
+  home_basic_box_score_stats <- fun_get_box_score_table(box_score_tables[[3]])
+  
+  #advanced
+  away_advanced_box_score_stats <- fun_get_box_score_table(box_score_tables[[2]])
+  home_advanced_box_score_stats <- fun_get_box_score_table(box_score_tables[[4]])
+  
+  away_box_score <- away_basic_box_score_stats %>%
+    left_join(away_advanced_box_score_stats, by = "Players") %>%
+    mutate(Starter.Reserve = ifelse(row_number() <= 5, "Starter", "Reserve")) %>%
+    mutate(Home.Away = "Away")
+  
+  home_box_score <- home_basic_box_score_stats %>%
+    left_join(home_advanced_box_score_stats, by = "Players") %>%
+    mutate(Starter.Reserve = ifelse(row_number() <= 5, "Starter", "Reserve")) %>%
+    mutate(Home.Away = "Home")
+  
+  box_score <- bind_rows(away_box_score, home_box_score) %>%
+    mutate(Game.Url = url)
+  
+  return(box_score)
+}
 ########################################################################################
 ############################################
 
@@ -35,46 +77,14 @@ dt_Schedule <- dt_Schedule %>%
                 mutate(Date.Key = format(Date, "%Y%m%d")) %>%
                 mutate(Game.URL = create_game_url(as.character(Date.Key), Team.Code))
 
-fun_get_basic_box_score <- function(df, sHome_or_Away) {
-  header.Row <- df[1, -1] %>%
-    t()
-  rownames(header.Row) <- c()
-  header.Row <- rbind("Players", header.Row)
-  
-  basic_box_score_stats <- df %>%
-    setnames(header.Row) %>%
-    filter(!Players %in% c("Starters", "Reserves")) %>%
-    mutate(Starter.Reserve = ifelse(row_number() <= 5, "Starter", "Reserve")) %>%
-    mutate(Home.Away = sHome_or_Away)
-
-  return(basic_box_score_stats)
+box_scores_list <- vector("list", 1200)
+i=1
+for (game_url in dt_Schedule$Game.URL[1:1200]) {
+  box_scores_list[[i]] <- fun_get_game_box_score(game_url)
+  i=i+1
 }
 
+box_scores_list[[1]]
 
-fun_get_game_box_score <- function(game_url) {
-  html <- read_html(game_url)
-  node <- html_nodes(html, "table")
-  box_score_tables <- html_table(node, header = T)
-  
-  # away - basic
-  away_basic_box_score_stats <- fun_get_basic_box_score(box_score_tables[[1]], "Away")
-  home_basic_box_score_stats <- fun_get_basic_box_score(box_score_tables[[3]], "Home")
-  
-  # away - advanced
-  header.Row <- box_score_tables[[2]][1, -1] %>%
-    t()
-  rownames(header.Row) <- c()
-  header.Row <- rbind("Players", header.Row)
-  
-  away_advandced_box_score_stats <- box_score_tables[[2]] %>%
-    setnames(header.Row) %>%
-    filter(!Players %in% c("Starters", "Reserves")) %>%
-    select(everything(), -MP)
-  
-  away_box_score <- away_basic_box_score_stats %>%
-    left_join(away_advandced_box_score_stats, by = "Players")
-}
-
-game_url <- "https://www.basketball-reference.com/boxscores/201611010NOP.html"
-
-View(away_box_score)
+https://www.basketball-reference.com/boxscores/200011020PHO.html
+https://www.basketball-reference.com/boxscores/200011020PHO.html

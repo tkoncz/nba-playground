@@ -52,9 +52,25 @@ games <- games %>%
             mutate(Win.Total = cumsum(W)) %>%
             ungroup()
 
+west_teams <- c("Golden State Warriors",
+                "Los Angeles Clippers",
+                "Los Angeles Lakers",
+                "Phoenix Suns",
+                "Sacramento Kings",
+                "Dallas Mavericks",
+                "Houston Rockets",
+                "Memphis Grizzlies",
+                "New Orleans Pelicans",
+                "San Antonio Spurs",
+                "Denver Nuggets",
+                "Minnesota Timberwolves",
+                "Oklahoma City Thunder",
+                "Portland Trail Blazers",
+                "Utah Jazz")
+
 
 games %>%
-  filter(Team %in% c("Atlanta Hawks", "Houston Rockets")) %>%
+  filter(Team %in% west_teams) %>%
   ggplot(aes(x= Game.No, y= Win.Total, color = Team)) +
   geom_line() +
   theme_minimal()

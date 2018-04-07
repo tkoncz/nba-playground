@@ -21,7 +21,7 @@ html_to_table <- function(url) {
   return(table)
 }
 
-years <- c(as.character(2001:2018))
+years <- c(as.character(2005:2018))
 months <- c("september", "october", "november", "december", "january", "february",
             "march", "april", "may", "june")
 

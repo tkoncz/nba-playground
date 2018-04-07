@@ -49,5 +49,12 @@ games <- games %>%
             arrange(Team, Date) %>%
             group_by(Team) %>%
             mutate(Game.No   = row_number()) %>%
-            mutate(Win.Total = cumsum(W))
+            mutate(Win.Total = cumsum(W)) %>%
+            ungroup()
 
+
+games %>%
+  filter(Team %in% c("Atlanta Hawks", "Houston Rockets")) %>%
+  ggplot(aes(x= Game.No, y= Win.Total, color = Team)) +
+  geom_line() +
+  theme_minimal()

@@ -68,9 +68,31 @@ west_teams <- c("Golden State Warriors",
                 "Portland Trail Blazers",
                 "Utah Jazz")
 
-
 games %>%
   filter(Team %in% west_teams) %>%
   ggplot(aes(x= Game.No, y= Win.Total, color = Team)) +
   geom_line() +
   theme_minimal()
+
+west <- games %>%
+          filter(Team %in% west_teams) %>%
+          group_by(Game.No) %>%
+          mutate(position = rank(-Win.Total, ties.method = 'first'))
+
+west %>%
+  filter(Game.No >= 42) %>%
+  filter(Game.No <= 78) %>%
+  filter(Team %in% c("Los Angeles Clippers",
+         "New Orleans Pelicans",
+         "San Antonio Spurs",
+         "Denver Nuggets",
+         "Minnesota Timberwolves",
+         "Oklahoma City Thunder",
+         "Portland Trail Blazers",
+         "Utah Jazz")) %>%
+  ggplot(aes(x= Game.No, y= position, color = Team)) + 
+    geom_line(size = 1.05) +
+    geom_point(size = 2) +
+    scale_y_reverse() +
+    theme_minimal()
+

@@ -68,36 +68,21 @@ max_GameNo <- games %>%
                 summarize(min(max)) %>%
                 pull()
 
-games_by_opponent <- vector("list", max_GameNo)
+winpct_by_opponent <- vector("list", max_GameNo)
 
 for(i in c(1:max_GameNo)) {
-  games_by_opponent[[i]] <- games %>%
+  winpct_by_opponent[[i]] <- games %>%
                               filter(Game.No <= i) %>%
                               group_by(Team, Opponent) %>%
                               summarize(Win.Pct = sum(W) / n()) %>%
                               mutate(Game.No = i) %>%
-                              arrange(Team, Opponent) %>%
-                              tidyr::spread(key = Opponent, value = Win.Pct)
+                              arrange(Team, Opponent) #%>%
+                              # tidyr::spread(key = Opponent, value = Win.Pct)
 }
 
-games_by_opponent <- do.call(rbind, games_by_opponent)
+winpct_by_opponent <- do.call(rbind, winpct_by_opponent)
 ## 
 
-
-games %>%
-  filter(Game.No <= 70) %>%
-  group_by(Team, Opponent) %>%
-  summarize(Win.Pct = sum(W) / n()) %>%
-  filter(Team    == "Oklahoma City Thunder")
-
-games %>%
-  arrange(Game.No, Team, Opponent) %>%
-  group_by(Team, Opponent) %>%
-  (Win.Pct = cumsum(W)) %>%
-  filter(Game.No == 70) %>%
-  filter(Team    == "Oklahoma City Thunder")
-
-games %>% head()
 
 # games %>%
 #   filter(Team %in% west_teams) %>%
@@ -107,18 +92,58 @@ games %>% head()
 
 standings <- games %>%
                group_by(Conference, Game.No) %>%
-               mutate(rank_wins = rank(-Win.Total, ties.method = "min")) %>%
-               ungroup()
-
-standings <- standings %>%
-               group_by(Conference, Game.No, rank_wins) %>%
+               mutate(rank_1 = rank(-Win.Total, ties.method = "min")) %>%
+               ungroup() %>%
+               group_by(Conference, Game.No, rank_1) %>%
                mutate(n = n()) %>%
                ungroup()
 
-standings %>%
-  filter(Conference == "Western") %>%
-  filter(Game.No == 70) %>%
-  arrange(rank_wins)
+# winpct_by_opponent %>%
+#   filter(Game.No == 70) %>%
+#   filter(Team == "Memphis Grizzlies") %>%
+#   select("Phoenix Suns")
+
+# a. Two Teams Tied
+twoway_tie_breakers <- standings %>%
+                         filter(n == 2) %>%
+                         arrange(rank_1) %>%
+                         select(Conference, Game.No, rank_1, Team)
+
+# (1) Better winning percentage in games against each other
+twoway_tie_breakers_1 <- twoway_tie_breakers %>%
+                           left_join(tie_breakers, by = c("Conference", "Game.No", "rank_1")) %>%
+                           filter(Team.x != Team.y) %>%
+                           rename("Team"     = "Team.x") %>%
+                           rename("Opponent" = "Team.y") %>% 
+                           left_join(winpct_by_opponent, by = c("Team", "Opponent","Game.No")) %>%
+                           mutate(rank_2 = ifelse(!is.na(Win.Pct) & Win.Pct < 0.5, 1, 0)) %>%
+                           filter(Game.No == 70)
+
+# (2) Division winner (this criterion is applied regardless of whether the tied teams are in the same division).
+# (3) Better winning percentage against teams in own division (only if tied teams are in same division).
+# (4) Better winning percentage against teams in own conference.
+# (5) Better winning percentage against teams eligible for playoffs in own conference (including teams that finished the regular season tied for a playoff position).
+# (6) Better winning percentage against teams eligible for playoffs in opposite conference (including teams that finished the regular season tied for a playoff position).
+# (7) Better net result of total points scored less total points allowed against all opponents (“point differential”).
+# 
+# b. More Than Two Teams Tied
+multiway_tie_breakers <- standings %>%
+  filter(n > 2) %>%
+  arrange(rank_1) %>%
+  select(Conference, Game.No, rank_1, Team)
+
+# (1) Division winner (this criterion is applied regardless of whether the tied teams are in the same division).
+# (2) Better winning percentage in all games among the tied teams.
+# (3) Better winning percentage against teams in own division (only if all tied teams are in same division).
+# (4) Better winning percentage against teams in own conference.
+# (5) Better winning percentage against teams eligible for playoffs in own conference (including teams that finished the regular season tied for a playoff position).
+# (6) Better net result of total points scored less total points allowed against all opponents (“point differential”).
+
+
+
+
+
+
 
 standings %>%
   filter(Game.No >= 42) %>%

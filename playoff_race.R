@@ -89,41 +89,70 @@ winpct_by_opponent <- do.call(rbind, winpct_by_opponent)
 
 standings <- games %>%
                group_by(Conference, Game.No) %>%
-               mutate(rank_1 = rank(-Win.Total, ties.method = "min")) %>%
+               mutate(conference_rank_0 = rank(-Win.Total, ties.method = "min")) %>%
                ungroup() %>%
-               group_by(Conference, Game.No, rank_1) %>%
-               mutate(n = n()) %>%
+               group_by(Conference, Game.No, conference_rank_0) %>%
+               mutate(tie_count = n()) %>%
                ungroup()
 
 division_standings <- games %>%
                         group_by(Game.No, Division) %>%
                         mutate(division_rank = rank(-Win.Total, ties.method = "min")) %>%
                         ungroup() %>%
-                        select(Game.No, Division, division_rank, Team, Win.Total) %>%
-                        arrange(desc(Game.No), Division, division_rank) %>%
-                        filter(Game.No == 79 & Division == "Central")
+                        select(Game.No, Team, division_rank)
+                        # select(Game.No, Division, division_rank, Team, Win.Total) %>%
+                        # arrange(desc(Game.No), Division, division_rank)
+
+standings <- standings %>%
+               left_join(division_standings, by = c("Game.No", "Team"))
+
+
+standings <- standings %>%
+               select(Game.No, Conference, Division, Team, Win.Total, conference_rank_0, tie_count, division_rank)
+
+################################
+#### RESOLVING TIE-BREAKERS ####
+################################
 
 # a. Two Teams Tied
 twoway_tie_breakers <- standings %>%
-                         filter(n == 2) %>%
-                         arrange(rank_1) %>%
-                         select(Conference, Game.No, rank_1, Team)
+                         filter(tie_count == 2) %>%
+                         arrange(conference_rank_0) %>%
+                         select(Conference, Game.No, conference_rank_0, Team)
 
 # (1) Better winning percentage in games against each other
 twoway_tie_breakers_1 <- twoway_tie_breakers %>%
-                           left_join(twoway_tie_breakers, by = c("Conference", "Game.No", "rank_1")) %>%
+                           left_join(twoway_tie_breakers, by = c("Conference", "Game.No", "conference_rank_0")) %>%
                            filter(Team.x != Team.y) %>%
                            rename("Team"     = "Team.x") %>%
                            rename("Opponent" = "Team.y") %>% 
                            left_join(winpct_by_opponent, by = c("Team", "Opponent","Game.No")) %>%
-                           mutate(rank_2 = ifelse(!is.na(Win.Pct) & Win.Pct < 0.5, 1, 0)) %>%
-                           select(Team, Game.No, rank_2)
+                           mutate(conference_rank_1_addon = ifelse(!is.na(Win.Pct) & Win.Pct < 0.5, 1, 0)) %>%
+                           select(Team, Game.No, conference_rank_1_addon)
 
 standings <- standings %>%
-               left_join(twoway_tie_breakers_1, by = c("Team", "Game.No"))
+               left_join(twoway_tie_breakers_1, by = c("Team", "Game.No")) %>%
+               mutate(conference_rank_1 = ifelse(!is.na(conference_rank_1_addon),
+                                                 conference_rank_0 + conference_rank_1_addon,
+                                                 conference_rank_0)) %>%
+               mutate(conference_rank_1 = as.integer(conference_rank_1)) %>%
+               select(everything(), -conference_rank_0, -conference_rank_1_addon)
+
+standings <- standings %>%
+               group_by(Conference, Game.No, conference_rank_1) %>%
+               mutate(tie_count = n()) %>%
+               ungroup()
+
+# #test:
+# standings %>%
+#   filter(Game.No == 70) %>%
+#   filter(Conference == "Eastern") %>%
+#   arrange(conference_rank_1)
+
 # (2) Division winner (this criterion is applied regardless of whether the tied teams are in the same division).
 
 ##TODO, based on div. standings calculated earlier
+head(standings)
 
 # (3) Better winning percentage against teams in own division (only if tied teams are in same division).
 # (4) Better winning percentage against teams in own conference.
@@ -138,7 +167,13 @@ multiway_tie_breakers <- standings %>%
                            select(Conference, Game.No, rank_1, Team)
 
 # (1) Division winner (this criterion is applied regardless of whether the tied teams are in the same division).
+
+#TODO
+
 # (2) Better winning percentage in all games among the tied teams.
+
+#TODO
+
 # (3) Better winning percentage against teams in own division (only if all tied teams are in same division).
 # (4) Better winning percentage against teams in own conference.
 # (5) Better winning percentage against teams eligible for playoffs in own conference (including teams that finished the regular season tied for a playoff position).

@@ -10,7 +10,8 @@ schedule <- schedule %>%
               setnames(old = 1:6, new = c("Date", "Start_ET", "Away.Team", "Away.Points", "Home.Team", "Home.Points")) %>%
               select(Date, Start_ET, Away.Team, Away.Points, Home.Team, Home.Points)
 
-##TODO: based on "Playoff" row extract last day of regular season
+##TODO: based on "Playoff" row extract last day of regular season. 
+##TODO: also, add a "season" column, and regular vs PO season
 
 s_2018 <- schedule %>%
             filter(Date != "Playoffs") %>%
@@ -30,6 +31,7 @@ s_2018 <- s_2018 %>%
             mutate(Home.W = (Home.Points > Away.Points),
                    Away.W = !Home.W)
 
+### TODO: all above could be moved to the schedule extraction code piece
 
 away_games <- s_2018 %>% 
                 select(Date, Away.Team, Home.Team, Away.W) %>%
@@ -143,16 +145,43 @@ standings <- standings %>%
                mutate(tie_count = n()) %>%
                ungroup()
 
-# #test:
+# #test: game 70
 # standings %>%
 #   filter(Game.No == 70) %>%
 #   filter(Conference == "Eastern") %>%
 #   arrange(conference_rank_1)
 
 # (2) Division winner (this criterion is applied regardless of whether the tied teams are in the same division).
+twoway_tie_breakers_2 <- standings %>%
+                           filter(tie_count == 2) %>%
+                           arrange(conference_rank_1) %>%
+                           group_by(Game.No, Conference, Win.Total) %>%
+                           mutate(max_division_rank = max(division_rank),
+                                  min_division_rank = min(division_rank)) %>%
+                           ungroup() %>%
+                           mutate(conference_rank_2_addon = ifelse(min_division_rank == 1 & max_division_rank != 1,
+                                                                   ifelse(division_rank == 1, 0, 1),
+                                                                   0)) %>%
+                           select(Game.No, Team, conference_rank_2_addon)
 
-##TODO, based on div. standings calculated earlier
-head(standings)
+standings <- standings %>%
+               left_join(twoway_tie_breakers_2, by = c("Game.No", "Team")) %>%
+               mutate(conference_rank_2 = ifelse(!is.na(conference_rank_2_addon),
+                                                 conference_rank_1 + conference_rank_2_addon,
+                                                 conference_rank_1)) %>%
+               mutate(conference_rank_2 = as.integer(conference_rank_2)) %>%
+               select(everything(), -conference_rank_1, -conference_rank_2_addon)
+
+standings <- standings %>%
+               group_by(Conference, Game.No, conference_rank_2) %>%
+               mutate(tie_count = n()) %>%
+               ungroup()
+
+# #test: game 28
+standings %>%
+  filter(Game.No == 28) %>%
+  filter(Conference == "Eastern") %>%
+  arrange(conference_rank_2)
 
 # (3) Better winning percentage against teams in own division (only if tied teams are in same division).
 # (4) Better winning percentage against teams in own conference.

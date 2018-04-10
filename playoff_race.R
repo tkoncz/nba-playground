@@ -47,10 +47,13 @@ home_games <- s_2018 %>%
 
 games <- rbind(away_games, home_games) 
 
+
+##TODO: remove Game.No filter once all games are played!!!
 games <- games %>%
             arrange(Team, Date) %>%
             group_by(Team) %>%
             mutate(Game.No   = row_number()) %>%
+            filter(Game.No <= 78) %>%
             mutate(Win.Total = cumsum(W)) %>%
             ungroup()
 
@@ -84,12 +87,6 @@ winpct_by_opponent <- do.call(rbind, winpct_by_opponent)
 ## 
 
 
-# games %>%
-#   filter(Team %in% west_teams) %>%
-#   ggplot(aes(x= Game.No, y= Win.Total, color = Team)) +
-#   geom_line() +
-#   theme_minimal()
-
 standings <- games %>%
                group_by(Conference, Game.No) %>%
                mutate(rank_1 = rank(-Win.Total, ties.method = "min")) %>%
@@ -98,10 +95,13 @@ standings <- games %>%
                mutate(n = n()) %>%
                ungroup()
 
-# winpct_by_opponent %>%
-#   filter(Game.No == 70) %>%
-#   filter(Team == "Memphis Grizzlies") %>%
-#   select("Phoenix Suns")
+division_standings <- games %>%
+                        group_by(Game.No, Division) %>%
+                        mutate(division_rank = rank(-Win.Total, ties.method = "min")) %>%
+                        ungroup() %>%
+                        select(Game.No, Division, division_rank, Team, Win.Total) %>%
+                        arrange(desc(Game.No), Division, division_rank) %>%
+                        filter(Game.No == 79 & Division == "Central")
 
 # a. Two Teams Tied
 twoway_tie_breakers <- standings %>%
@@ -111,15 +111,20 @@ twoway_tie_breakers <- standings %>%
 
 # (1) Better winning percentage in games against each other
 twoway_tie_breakers_1 <- twoway_tie_breakers %>%
-                           left_join(tie_breakers, by = c("Conference", "Game.No", "rank_1")) %>%
+                           left_join(twoway_tie_breakers, by = c("Conference", "Game.No", "rank_1")) %>%
                            filter(Team.x != Team.y) %>%
                            rename("Team"     = "Team.x") %>%
                            rename("Opponent" = "Team.y") %>% 
                            left_join(winpct_by_opponent, by = c("Team", "Opponent","Game.No")) %>%
                            mutate(rank_2 = ifelse(!is.na(Win.Pct) & Win.Pct < 0.5, 1, 0)) %>%
-                           filter(Game.No == 70)
+                           select(Team, Game.No, rank_2)
 
+standings <- standings %>%
+               left_join(twoway_tie_breakers_1, by = c("Team", "Game.No"))
 # (2) Division winner (this criterion is applied regardless of whether the tied teams are in the same division).
+
+##TODO, based on div. standings calculated earlier
+
 # (3) Better winning percentage against teams in own division (only if tied teams are in same division).
 # (4) Better winning percentage against teams in own conference.
 # (5) Better winning percentage against teams eligible for playoffs in own conference (including teams that finished the regular season tied for a playoff position).
@@ -128,9 +133,9 @@ twoway_tie_breakers_1 <- twoway_tie_breakers %>%
 # 
 # b. More Than Two Teams Tied
 multiway_tie_breakers <- standings %>%
-  filter(n > 2) %>%
-  arrange(rank_1) %>%
-  select(Conference, Game.No, rank_1, Team)
+                           filter(n > 2) %>%
+                           arrange(rank_1) %>%
+                           select(Conference, Game.No, rank_1, Team)
 
 # (1) Division winner (this criterion is applied regardless of whether the tied teams are in the same division).
 # (2) Better winning percentage in all games among the tied teams.
@@ -144,22 +149,30 @@ multiway_tie_breakers <- standings %>%
 
 
 
+## VISUALS
 
-standings %>%
-  filter(Game.No >= 42) %>%
-  filter(Game.No <= 78) %>%
-  # filter(Team %in% c("Los Angeles Clippers",
-  #        "New Orleans Pelicans",
-  #        "San Antonio Spurs",
-  #        "Denver Nuggets",
-  #        "Minnesota Timberwolves",
-  #        "Oklahoma City Thunder",
-  #        "Portland Trail Blazers",
-  #        "Utah Jazz")) %>%
-  ggplot(aes(x= Game.No, y= position, color = Team)) + 
-    geom_line(size = 1.05) +
-    geom_point(size = 2) +
-    scale_y_reverse() +
-    facet_grid(~Conference) +
-    theme_minimal()
+# games %>%
+#   filter(Team %in% west_teams) %>%
+#   ggplot(aes(x= Game.No, y= Win.Total, color = Team)) +
+#   geom_line() +
+#   theme_minimal()
+
+# 
+# standings %>%
+#   filter(Game.No >= 42) %>%
+#   filter(Game.No <= 78) %>%
+#   # filter(Team %in% c("Los Angeles Clippers",
+#   #        "New Orleans Pelicans",
+#   #        "San Antonio Spurs",
+#   #        "Denver Nuggets",
+#   #        "Minnesota Timberwolves",
+#   #        "Oklahoma City Thunder",
+#   #        "Portland Trail Blazers",
+#   #        "Utah Jazz")) %>%
+#   ggplot(aes(x= Game.No, y= position, color = Team)) + 
+#     geom_line(size = 1.05) +
+#     geom_point(size = 2) +
+#     scale_y_reverse() +
+#     facet_grid(~Conference) +
+#     theme_minimal()
 

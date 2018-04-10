@@ -59,11 +59,18 @@ games <- games %>%
             mutate(Win.Total = cumsum(W)) %>%
             ungroup()
 
-#### add Conference / Division columns
+
+## add Conference / Division columns for Team & Opponent
 teams <- fread(file = "C:/Users/tkonc/Documents/Data/NBA Playground/Conference_Division_Team.csv") 
 
 games <- games %>%
-           left_join(teams, by = "Team")
+           left_join(teams, by = "Team") %>%
+           left_join(teams, by = c("Opponent" = "Team")) %>%
+           rename("Conference"      = "Conference.x",
+                  "Division"        = "Division.x",
+                  "Opp. Conference" = "Conference.y",
+                  "Opp. Division"   = "Division.y") 
+## 
 
 
 ## Game.No, Opponent matrix
@@ -73,19 +80,54 @@ max_GameNo <- games %>%
                 summarize(min(max)) %>%
                 pull()
 
-winpct_by_opponent <- vector("list", max_GameNo)
+winpct_by_opponent   <- vector("list", max_GameNo)
+winpct_by_division   <- vector("list", max_GameNo)
+winpct_by_conference <- vector("list", max_GameNo)
 
 for(i in c(1:max_GameNo)) {
-  winpct_by_opponent[[i]] <- games %>%
-                              filter(Game.No <= i) %>%
-                              group_by(Team, Opponent) %>%
-                              summarize(Win.Pct = sum(W) / n()) %>%
-                              mutate(Game.No = i) %>%
-                              arrange(Team, Opponent) #%>%
-                              # tidyr::spread(key = Opponent, value = Win.Pct)
+  winpct_by_opponent[[i]]   <- games %>%
+                                filter(Game.No <= i) %>%
+                                group_by(Team, Opponent) %>%
+                                summarize(Win.Pct = sum(W) / n()) %>%
+                                ungroup() %>%
+                                mutate(Game.No = i) %>%
+                                arrange(Team, Opponent) #%>%
+                                # tidyr::spread(key = Opponent, value = Win.Pct)
+  
+  winpct_by_division[[i]]   <- games %>%
+                                 filter(Game.No <= i) %>%
+                                 group_by(Team, `Opp. Division`) %>%
+                                 summarize(Win.Pct = sum(W) / n()) %>%
+                                 ungroup() %>%
+                                 mutate(Game.No = i) %>%
+                                 arrange(Team, `Opp. Division`)
+  
+  winpct_by_conference[[i]] <- games %>%
+                                 filter(Game.No <= i) %>%
+                                 group_by(Team, `Opp. Conference`) %>%
+                                 summarize(Win.Pct = sum(W) / n()) %>%
+                                 ungroup() %>%
+                                 mutate(Game.No = i) %>%
+                                 arrange(Team, `Opp. Conference`)
 }
 
-winpct_by_opponent <- do.call(rbind, winpct_by_opponent)
+winpct_by_opponent   <- do.call(rbind, winpct_by_opponent)
+winpct_by_division   <- do.call(rbind, winpct_by_division)
+winpct_by_conference <- do.call(rbind, winpct_by_conference)
+
+# test for winpct_by_division: Game no 55, Boston Celtics
+# games %>%
+#   filter(Game.No <= 55) %>%
+#   group_by(Team, `Opp. Division`) %>%
+#   summarize(Win.Pct = sum(W) / n()) %>%
+#   ungroup() %>%
+#   mutate(Game.No = i) %>%
+#   arrange(Team, `Opp. Division`) %>%
+#   filter(Team == "Boston Celtics")
+# 
+# winpct_by_division %>%
+#   filter(Game.No == 55) %>%
+#   filter(Team == "Boston Celtics")
 ## 
 
 
@@ -178,12 +220,21 @@ standings <- standings %>%
                ungroup()
 
 # #test: game 28
-standings %>%
-  filter(Game.No == 28) %>%
-  filter(Conference == "Eastern") %>%
-  arrange(conference_rank_2)
+# standings %>%
+#   filter(Game.No == 28) %>%
+#   filter(Conference == "Eastern") %>%
+#   arrange(conference_rank_2)
 
 # (3) Better winning percentage against teams in own division (only if tied teams are in same division).
+#Step 1: get list of ties within same division
+twoway_tie_breakers <- standings %>%
+                         filter(tie_count == 2) %>%
+                         group_by(Game.No, Conference, conference_rank_2) %>%
+                         mutate(division_count = n_distinct(Division)) %>%
+                         ungroup() %>%
+                         filter(division_count == 1) %>%
+                         select(Game.No, Conference, Division, conference_rank_2, Team)
+
 # (4) Better winning percentage against teams in own conference.
 # (5) Better winning percentage against teams eligible for playoffs in own conference (including teams that finished the regular season tied for a playoff position).
 # (6) Better winning percentage against teams eligible for playoffs in opposite conference (including teams that finished the regular season tied for a playoff position).

@@ -311,14 +311,28 @@ standings <- standings %>%
 # (6) Better winning percentage against teams eligible for playoffs in opposite conference (including teams that finished the regular season tied for a playoff position).
 # (7) Better net result of total points scored less total points allowed against all opponents (“point differential”).
 # 
+
 # b. More Than Two Teams Tied
 multiway_tie_breakers <- standings %>%
-                           filter(n > 2) %>%
-                           arrange(rank_1) %>%
-                           select(Conference, Game.No, rank_1, Team)
+                           filter(tie_count > 2) %>%
+                           arrange(conference_rank_4) %>%
+                           select(Conference, Game.No, conference_rank_4, Division, division_rank, Team)
 
 # (1) Division winner (this criterion is applied regardless of whether the tied teams are in the same division).
+fun_get_2nd <-  function(x) sort(x, decreasing = F)[2]
 
+second_best_division_ranks <- multiway_tie_breakers %>%
+                                group_by(Game.No, Conference, conference_rank_4) %>%
+                                summarize(second_division_rank = fun_get_2nd(division_rank)) %>%
+                                ungroup() %>%
+                                arrange(Game.No, Conference, conference_rank_4)
+
+## CONTINUE HERE
+multiway_tie_breakers %>%
+  left_join(second_best_division_ranks, by = c("Game.No", "Conference", "conference_rank_4")) %>%
+  mutate(conference_rank_1_addon = ifelse(division_rank == 1 & second_division_rank > 1, 999, 999))
+  
+standings %>% filter(Conference == "Eastern" & Game.No == 8 & conference_rank_4 == 3)  
 #TODO
 
 # (2) Better winning percentage in all games among the tied teams.

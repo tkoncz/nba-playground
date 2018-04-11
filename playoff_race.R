@@ -115,6 +115,11 @@ winpct_by_opponent   <- do.call(rbind, winpct_by_opponent)
 winpct_by_division   <- do.call(rbind, winpct_by_division)
 winpct_by_conference <- do.call(rbind, winpct_by_conference)
 
+# winpct_by_opponent %>%
+#   filter(Game.No == 78) %>%
+#   filter(Team == "San Antonio Spurs") %>%
+#   filter(Opponent == "Minnesota Timberwolves")
+
 # test for winpct_by_division: Game no 55, Boston Celtics
 # games %>%
 #   filter(Game.No <= 55) %>%
@@ -311,29 +316,48 @@ standings <- standings %>%
 # (6) Better winning percentage against teams eligible for playoffs in opposite conference (including teams that finished the regular season tied for a playoff position).
 # (7) Better net result of total points scored less total points allowed against all opponents (“point differential”).
 # 
+standings <- standings %>%
+               rename("conference_rank" = "conference_rank_4")
 
 # b. More Than Two Teams Tied
 multiway_tie_breakers <- standings %>%
                            filter(tie_count > 2) %>%
-                           arrange(conference_rank_4) %>%
-                           select(Conference, Game.No, conference_rank_4, Division, division_rank, Team)
+                           arrange(conference_rank) %>%
+                           select(Conference, Game.No, conference_rank, Division, division_rank, Team)
 
 # (1) Division winner (this criterion is applied regardless of whether the tied teams are in the same division).
-fun_get_2nd <-  function(x) sort(x, decreasing = F)[2]
+#Step1: get best division rank among tied teams
+best_division_ranks <- multiway_tie_breakers %>%
+                         group_by(Game.No, Conference, conference_rank) %>%
+                         summarize(first_division_rank = min(division_rank)) %>%
+                         ungroup() %>%
+                         arrange(Game.No, Conference, conference_rank)
 
-second_best_division_ranks <- multiway_tie_breakers %>%
-                                group_by(Game.No, Conference, conference_rank_4) %>%
-                                summarize(second_division_rank = fun_get_2nd(division_rank)) %>%
-                                ungroup() %>%
-                                arrange(Game.No, Conference, conference_rank_4)
+#Step2: give penalty to not 1st placed teams, if there is a 1st places one among the group
+multiway_tie_breakers_1 <- multiway_tie_breakers %>%
+                             left_join(best_division_ranks, by = c("Game.No", "Conference", "conference_rank")) %>%
+                             mutate(conference_rank_1_addon = ifelse(first_division_rank == 1 & division_rank > 1, 1, 0)) %>%
+                             select(Game.No, Team, conference_rank_1_addon)
 
-## CONTINUE HERE
-multiway_tie_breakers %>%
-  left_join(second_best_division_ranks, by = c("Game.No", "Conference", "conference_rank_4")) %>%
-  mutate(conference_rank_1_addon = ifelse(division_rank == 1 & second_division_rank > 1, 999, 999))
-  
-standings %>% filter(Conference == "Eastern" & Game.No == 8 & conference_rank_4 == 3)  
-#TODO
+#Step3: recalculate rankings with new penalty
+standings <- standings %>%
+               left_join(multiway_tie_breakers_1, by = c("Game.No", "Team")) %>%
+               mutate(conference_rank_1 = ifelse(!is.na(conference_rank_1_addon),
+                                                 conference_rank + conference_rank_1_addon,
+                                                 conference_rank)) %>%
+               select(everything(), -conference_rank, -conference_rank_1_addon)  
+
+
+standings <- standings %>%
+               group_by(Conference, Game.No, conference_rank_1) %>%
+               mutate(tie_count = n()) %>%
+               ungroup()
+
+# #test, 3rd place
+# standings %>%
+#   filter(Conference == "Eastern" & Game.No == 8) %>%
+#   arrange(conference_rank_1)
+
 
 # (2) Better winning percentage in all games among the tied teams.
 

@@ -7,9 +7,8 @@ rm(list = ls())
 schedule <- fread(file = "schedulesTable.csv") 
 
 schedule <- schedule %>%
-              setnames(old = 1:6, new = c("Date", "Start_ET", "Away.Team", "Away.Points", "Home.Team", "Home.Points")) %>%
-              select(Date, Start_ET, Away.Team, Away.Points, Home.Team, Home.Points)
-
+  setnames(old = 1:6, new = c("Date", "Start_ET", "Away.Team", "Away.Points", "Home.Team", "Home.Points")) %>%
+  select(Date, Start_ET, Away.Team, Away.Points, Home.Team, Home.Points)
 ##TODO: based on "Playoff" row extract last day of regular season. 
 ##TODO: also, add a "season" column, and regular vs PO season
 
@@ -563,6 +562,12 @@ fun_create_standings    <- function(df_of_games, df_of_winpct_by_opponent, df_of
   standings <- fun_tiebreaker_multiway(df_of_standings             = standings,
                                        df_of_games                 = df_of_games,
                                        df_of_winpct_by_conference  = winpct_by_conference) 
+  
+  #calling 2-way resolution one more team, to create new 2-ties from breaking up multis
+  standings <- fun_tiebreaker_2way(df_of_standings             = standings,
+                                   df_of_winpct_by_opponent    = winpct_by_opponent,
+                                   df_of_winpct_by_division    = winpct_by_division,
+                                   df_of_winpct_by_conference  = winpct_by_conference) 
 }
 
 
@@ -571,6 +576,9 @@ standings <- fun_create_standings(df_of_games                 = games,
                                   df_of_winpct_by_division    = winpct_by_division,
                                   df_of_winpct_by_conference  = winpct_by_conference)
 
+
+#standings %>% filter(Game.No > 40) %>% filter(Tie.Count > 1)
+#TODO: Game 62, 70, SAS vs NOP
 
 ## VISUALS
 

@@ -555,3 +555,5 @@ fun_create_standings    <- function(df_of_games, df_of_winpct_by_opponent, df_of
                                    df_of_winpct_by_conference  = winpct_by_conference) 
 }
 
+#standings %>% filter(Game.No > 40) %>% filter(Tie.Count > 1)
+#TODO: Game 62, 70, SAS vs NOP

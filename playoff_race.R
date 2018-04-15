@@ -434,7 +434,93 @@ standings <- standings %>%
 #   arrange(conference_rank_2)
 
 # (3) Better winning percentage against teams in own division (only if all tied teams are in same division).
+#Step 1: get list of ties within same division
+multiway_tie_breakers <- standings %>%
+                           filter(tie_count > 2) %>%
+                           group_by(Game.No, Conference, conference_rank_2) %>%
+                           mutate(division_count = n_distinct(Division)) %>%
+                           ungroup() %>%
+                           filter(division_count == 1) %>% 
+                           select(Game.No, Conference, Division, conference_rank_2, Team) %>%
+                           left_join(winpct_by_division, by = c("Game.No" = "Game.No", "Team" = "Team", "Division" = "Opp. Division")) 
+
+#Step2: add win.pct of tied team 
+multiway_tie_breakers_3 <-  multiway_tie_breakers %>%
+                              group_by(Game.No, Division, conference_rank_2) %>%
+                              mutate(Win.Pct.NA.check = is.na(sum(Win.Pct, na.rm = F))) %>%
+                              ungroup() %>%
+                              mutate(Win.Pct.Adj = ifelse(Win.Pct.NA.check, 0, Win.Pct)) %>%
+                              group_by(Game.No, Conference, conference_rank_2) %>%
+                              mutate(indivision_rank = dense_rank(-Win.Pct.Adj)) %>% 
+                              ungroup() %>%
+                              mutate(conference_rank_3_addon = indivision_rank - 1) %>%
+                              select(Game.No, Team, conference_rank_3_addon)
+
+#Step3: check which win.pct is higher, add rank-penalty based on that
+standings <- standings %>%
+               left_join(multiway_tie_breakers_3, by = c("Game.No", "Team")) %>%
+               mutate(conference_rank_3 = ifelse(!is.na(conference_rank_3_addon),
+                                                 conference_rank_2 + conference_rank_3_addon,
+                                                 conference_rank_2)) %>%
+               select(everything(), -conference_rank_2, -conference_rank_3_addon)
+
+#Step4: recalculate ties
+standings <- standings %>%
+  group_by(Conference, Game.No, conference_rank_3) %>%
+  mutate(tie_count = n()) %>%
+  ungroup()
+
+# #TODO: create test
+# standings %>%
+#   filter(Game.No == 17) %>%
+#   filter(Conference == "Western") %>%
+#   arrange(conference_rank_3)
+# 
+# multiway_tie_breakers_3 %>% 
+#   filter(Game.No == 17)
+
 # (4) Better winning percentage against teams in own conference.
+# Step1: list of tied teams, enriched with conf. win %
+multiway_tie_breakers <- standings %>%
+                           filter(tie_count > 2) %>%
+                           left_join(winpct_by_conference, by = c("Game.No" = "Game.No", "Team" = "Team", "Conference" = "Opp. Conference")) %>%
+                           select(Game.No, Conference, Team, conference_rank_3, Win.Pct)
+
+#Step2: add win.pct of tied team 
+multiway_tie_breakers_4 <- multiway_tie_breakers %>%
+                             group_by(Game.No, Conference, conference_rank_3) %>%
+                             mutate(Win.Pct.NA.check = is.na(sum(Win.Pct, na.rm = F))) %>%
+                             ungroup() %>%
+                             mutate(Win.Pct.Adj = ifelse(Win.Pct.NA.check, 0, Win.Pct)) %>%
+                             group_by(Game.No, Conference, conference_rank_3) %>%
+                             mutate(inconference_rank = dense_rank(-Win.Pct.Adj)) %>% 
+                             ungroup() %>%
+                             mutate(conference_rank_4_addon = inconference_rank - 1) %>%
+                             select(Game.No, Team, conference_rank_4_addon)
+
+#Step3: check which win.pct is higher, add rank-penalty based on that
+standings <- standings %>%
+               left_join(multiway_tie_breakers_4, by = c("Game.No", "Team")) %>%
+               mutate(conference_rank_4 = ifelse(!is.na(conference_rank_4_addon),
+                                                 conference_rank_3 + conference_rank_4_addon,
+                                                 conference_rank_3)) %>%
+               select(everything(), -conference_rank_3, -conference_rank_4_addon)
+
+#Step4: recalculate ties
+standings <- standings %>%
+               group_by(Conference, Game.No, conference_rank_4) %>%
+               mutate(tie_count = n()) %>%
+               ungroup()
+
+# #TODO: create test
+standings %>%
+  filter(Game.No == 5) %>%
+  filter(Conference == "Eastern") %>%
+  arrange(conference_rank_4)
+
+multiway_tie_breakers_4 %>%
+  filter(Game.No == 5)
+
 # (5) Better winning percentage against teams eligible for playoffs in own conference (including teams that finished the regular season tied for a playoff position).
 # (6) Better net result of total points scored less total points allowed against all opponents (“point differential”).
 

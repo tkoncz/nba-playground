@@ -163,7 +163,7 @@ fun_base_standings <- function(df_of_games) {
   return(standings)
 }
 
-standings <- fun_base_standings(games)
+# standings <- fun_base_standings(games)
 
 ################################
 #### RESOLVING TIE-BREAKERS ####
@@ -216,7 +216,7 @@ fun_tiebreaker_2way_rule1 <- function(df_of_standings, df_of_winpct_by_opponent)
   fun_recalculate_standings(df_of_standings = df_of_standings, df_of_penalities = tie_breaker_penalities)
 }
 
-standings <- fun_tiebreaker_2way_rule1(standings, winpct_by_opponent)
+# standings <- fun_tiebreaker_2way_rule1(standings, winpct_by_opponent)
 
 # #test: game 70
 # standings %>%
@@ -246,7 +246,7 @@ fun_tiebreaker_2way_rule2 <- function(df_of_standings) {
   fun_recalculate_standings(df_of_standings = df_of_standings, df_of_penalities = tie_breaker_penalities)
 }
 
-standings <- fun_tiebreaker_2way_rule2(standings)
+# standings <- fun_tiebreaker_2way_rule2(standings)
 
 # #test: game 28
 # standings %>%
@@ -288,7 +288,7 @@ fun_tiebreaker_2way_rule3 <- function(df_of_standings, df_of_winpct_by_division)
   fun_recalculate_standings(df_of_standings = df_of_standings, df_of_penalities = tie_breaker_penalities)
 }
 
-standings <- fun_tiebreaker_2way_rule3(standings, winpct_by_division)
+# standings <- fun_tiebreaker_2way_rule3(standings, winpct_by_division)
 
 # #TODO: create test
 # standings %>%
@@ -321,7 +321,7 @@ fun_tiebreaker_2way_rule4 <- function(df_of_standings, df_of_winpct_by_conferenc
   fun_recalculate_standings(df_of_standings = df_of_standings, df_of_penalities = tie_breaker_penalities)
 }
 
-standings <- fun_tiebreaker_2way_rule4(standings, winpct_by_conference)
+# standings <- fun_tiebreaker_2way_rule4(standings, winpct_by_conference)
 
 # standings %>% filter(tie_count == 2) %>% summarize(m = max(Game.No))
 # twoway_tie_breakers %>% filter(Game.No == 39)
@@ -368,7 +368,7 @@ fun_tiebreaker_multiway_rule1 <- function(df_of_standings) {
 }
 
 
-standings <- fun_tiebreaker_multiway_rule1(standings)
+# standings <- fun_tiebreaker_multiway_rule1(standings)
              
 
 # #test, 3rd place
@@ -436,7 +436,7 @@ fun_tiebreaker_multiway_rule2 <- function(df_of_standings, df_of_games) {
 }
 
 
-standings <- fun_tiebreaker_multiway_rule2(standings, games)
+# standings <- fun_tiebreaker_multiway_rule2(standings, games)
 
 # #test: Game 8, West
 # standings %>%
@@ -473,7 +473,7 @@ fun_tiebreaker_multiway_rule3 <- function(df_of_standings, df_of_games) {
 }
 
 
-standings <- fun_tiebreaker_multiway_rule3(standings, games)
+# standings <- fun_tiebreaker_multiway_rule3(standings, games)
 
 # #TODO: create test
 # standings %>%
@@ -512,16 +512,16 @@ fun_tiebreaker_multiway_rule4 <- function(df_of_standings, df_of_winpct_by_confe
 }
   
 
-standings <- fun_tiebreaker_multiway_rule4(standings, winpct_by_conference)
+# standings <- fun_tiebreaker_multiway_rule4(standings, winpct_by_conference)
 
 # #TODO: create test
-standings %>%
-  filter(Game.No == 5) %>%
-  filter(Conference == "Eastern") %>%
-  arrange(Conference.Rank)
-
-multiway_tie_breakers_4 %>%
-  filter(Game.No == 5)
+# standings %>%
+#   filter(Game.No == 5) %>%
+#   filter(Conference == "Eastern") %>%
+#   arrange(Conference.Rank)
+# 
+# multiway_tie_breakers_4 %>%
+#   filter(Game.No == 5)
 
 # (5) Better winning percentage against teams eligible for playoffs in own conference (including teams that finished the regular season tied for a playoff position).
 # (6) Better net result of total points scored less total points allowed against all opponents (“point differential”).
@@ -529,6 +529,47 @@ multiway_tie_breakers_4 %>%
 
 
 
+
+fun_tiebreaker_2way     <- function(df_of_standings, df_of_winpct_by_opponent, df_of_winpct_by_division, df_of_winpct_by_conference) {
+  updated_standings <- df_of_standings %>% 
+                         fun_tiebreaker_2way_rule1(df_of_winpct_by_opponent) %>%
+                         fun_tiebreaker_2way_rule2() %>%
+                         fun_tiebreaker_2way_rule3(df_of_winpct_by_division) %>%
+                         fun_tiebreaker_2way_rule4(df_of_winpct_by_conference)
+  
+  return(updated_standings)
+}
+
+
+fun_tiebreaker_multiway <- function(df_of_standings, df_of_games, df_of_winpct_by_conference) {
+  updated_standings <- df_of_standings %>% 
+                         fun_tiebreaker_multiway_rule1() %>%
+                         fun_tiebreaker_multiway_rule2(df_of_games) %>%
+                         fun_tiebreaker_multiway_rule3(df_of_games) %>%
+                         fun_tiebreaker_multiway_rule4(df_of_winpct_by_conference)
+  
+  return(updated_standings)
+}
+
+
+fun_create_standings    <- function(df_of_games, df_of_winpct_by_opponent, df_of_winpct_by_division, df_of_winpct_by_conference) {
+  
+  standings <- fun_base_standings(df_of_games)
+  standings <- fun_tiebreaker_2way(df_of_standings             = standings,
+                                   df_of_winpct_by_opponent    = winpct_by_opponent,
+                                   df_of_winpct_by_division    = winpct_by_division,
+                                   df_of_winpct_by_conference  = winpct_by_conference) 
+  
+  standings <- fun_tiebreaker_multiway(df_of_standings             = standings,
+                                       df_of_games                 = df_of_games,
+                                       df_of_winpct_by_conference  = winpct_by_conference) 
+}
+
+
+standings <- fun_create_standings(df_of_games                 = games,
+                                  df_of_winpct_by_opponent    = winpct_by_opponent,
+                                  df_of_winpct_by_division    = winpct_by_division,
+                                  df_of_winpct_by_conference  = winpct_by_conference)
 
 
 ## VISUALS

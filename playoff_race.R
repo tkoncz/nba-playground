@@ -4,27 +4,9 @@ library(lubridate)
 library(ggplot2)
 
 rm(list = ls())
-schedule <- fread(file = "schedulesTable.csv") 
 
-schedule <- schedule %>%
-  setnames(old = 1:6, new = c("Date", "Start_ET", "Away.Team", "Away.Points", "Home.Team", "Home.Points")) %>%
-  select(Date, Start_ET, Away.Team, Away.Points, Home.Team, Home.Points)
-##TODO: based on "Playoff" row extract last day of regular season. 
-##TODO: also, add a "season" column, and regular vs PO season
+schedule <- fread(file = "C:/Users/tkonc/Documents/Data/NBA Playground/schedulesTable.csv") 
 
-s_2018 <- schedule %>%
-            filter(Date != "Playoffs") %>%
-            tidyr::separate(col = Date, into = c("Day.Of.Week", "Month.Day", "Year"), sep = ", ", fill = "right") %>%
-            mutate(Date = paste(Year, Month.Day, sep = " ")) %>%
-            mutate(Date = ymd(Date)) %>%
-            filter(Date >= date("2017-10-17")) %>%
-            mutate(Away.Points = as.integer(Away.Points)) %>%
-            mutate(Home.Points = as.integer(Home.Points)) %>%
-            filter(!is.na(Away.Points)) %>%
-            filter(!is.na(Home.Points)) %>%
-            select(Date, Away.Team, Away.Points, Home.Team, Home.Points)
-
-  
 
 s_2018 <- s_2018 %>%
             mutate(Home.W = (Home.Points > Away.Points),

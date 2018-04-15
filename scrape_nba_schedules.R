@@ -68,6 +68,16 @@ schedules_table <- schedules_table %>%
 
 last_day_of_reg <- fread("C:/Users/tkonc/Documents/Data/NBA Playground/LastDayOfRegularSeason.csv")
 
-schedules_table %>% filter(Season == "2017-2018") %>% tail()
+last_day_of_reg <- last_day_of_reg %>%
+                     tidyr::separate(col = Last.Day.Of.Regular.Season, 
+                                     into = c("Day.Of.Week", "Month.Day", "Year"), sep = ", ", fill = "right") %>%
+                     mutate(Last.Day.Of.Regular.Season = paste(Year, Month.Day, sep = " ")) %>%
+                     mutate(Last.Day.Of.Regular.Season = ymd(Last.Day.Of.Regular.Season)) %>%
+                     select(Season, Last.Day.Of.Regular.Season)
 
-fwrite(schedules_table, file = "schedulesTable.csv")
+schedules_table <- schedules_table %>% 
+                     left_join(last_day_of_reg, by = "Season") %>%
+                     mutate(Regular.Or.Playoff = ifelse(Date < Last.Day.Of.Regular.Season, "Regular Season", "Playoff"))
+  
+
+fwrite(schedules_table, file = "C:/Users/tkonc/Documents/Data/NBA Playground/schedulesTable.csv")

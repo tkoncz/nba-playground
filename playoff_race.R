@@ -50,12 +50,12 @@ home_games <- s_2018 %>%
 games <- rbind(away_games, home_games) 
 
 
-##TODO: remove Game.No filter once all games are played!!!
+##TODO: update <= 82 marker to handle shortened seasons
 games <- games %>%
             arrange(Team, Date) %>%
             group_by(Team) %>%
             mutate(Game.No   = row_number()) %>%
-            filter(Game.No <= 78) %>%
+            filter(Game.No <= 82) %>%
             mutate(Win.Total = cumsum(W)) %>%
             ungroup()
 
@@ -135,62 +135,88 @@ winpct_by_conference <- do.call(rbind, winpct_by_conference)
 #   filter(Team == "Boston Celtics")
 ## 
 
+fun_base_standings <- function(df_of_games) {
+  #calculates conference & division standings based on simple win.pct ranking, without any resolution for ties
+  
+  standings <- df_of_games %>%
+                 group_by(Conference, Game.No) %>%
+                 mutate(Conference.Rank = rank(-Win.Total, ties.method = "min")) %>%
+                 ungroup() %>%
+                 group_by(Conference, Game.No, Conference.Rank) %>%
+                 mutate(Tie.Count = n()) %>%
+                 ungroup()
+  
+  division_standings <- df_of_games %>%
+                          group_by(Game.No, Division) %>%
+                          mutate(Division.Rank = rank(-Win.Total, ties.method = "min")) %>%
+                          ungroup() %>%
+                          select(Game.No, Team, Division.Rank)
+  
+  standings <- standings %>%
+                 left_join(division_standings, by = c("Game.No", "Team"))
+  
+  
+  standings <- standings %>%
+                 select(Game.No, Conference, Conference.Rank, Division.Rank, Division, Team, Win.Total, Tie.Count) %>%
+                 arrange(Game.No, Conference, Conference.Rank, Team)
+  
+  return(standings)
+}
 
-standings <- games %>%
-               group_by(Conference, Game.No) %>%
-               mutate(conference_rank_0 = rank(-Win.Total, ties.method = "min")) %>%
-               ungroup() %>%
-               group_by(Conference, Game.No, conference_rank_0) %>%
-               mutate(tie_count = n()) %>%
-               ungroup()
-
-division_standings <- games %>%
-                        group_by(Game.No, Division) %>%
-                        mutate(division_rank = rank(-Win.Total, ties.method = "min")) %>%
-                        ungroup() %>%
-                        select(Game.No, Team, division_rank)
-                        # select(Game.No, Division, division_rank, Team, Win.Total) %>%
-                        # arrange(desc(Game.No), Division, division_rank)
-
-standings <- standings %>%
-               left_join(division_standings, by = c("Game.No", "Team"))
-
-
-standings <- standings %>%
-               select(Game.No, Conference, Division, Team, Win.Total, conference_rank_0, tie_count, division_rank)
+standings <- fun_base_standings(games)
 
 ################################
 #### RESOLVING TIE-BREAKERS ####
 ################################
 
 # a. Two Teams Tied
-twoway_tie_breakers <- standings %>%
-                         filter(tie_count == 2) %>%
-                         arrange(conference_rank_0) %>%
-                         select(Conference, Game.No, conference_rank_0, Team)
+fun_get_twoway_tie_breakers <- function(df_of_standings) {
+  #calculates all ties among exactly 2 teams
+  
+  twoway_tie_breakers <- df_of_standings %>%
+                           filter(Tie.Count == 2) %>%
+                           arrange(Game.No, Conference, Conference.Rank) %>%
+                           select(Game.No, Conference, Conference.Rank, Team)
+  
+  return(twoway_tie_breakers)
+}
+
+fun_recalculate_standings <- function(df_of_standings, df_of_penalities) {
+  #recalculates standings based on current standings + df containing "penalities", calculated from tie-breaker rules
+  
+  df_of_standings <- df_of_standings %>%
+                       left_join(df_of_penalities, by = c("Team", "Game.No")) %>%
+                       mutate(Conference.Rank = ifelse(!is.na(Conference.Rank.Addon),
+                                                       Conference.Rank + Conference.Rank.Addon,
+                                                       Conference.Rank)) %>%
+                       mutate(Conference.Rank = as.integer(Conference.Rank)) %>%
+                       select(everything(), -Conference.Rank.Addon) %>%
+                       group_by(Conference, Game.No, Conference.Rank) %>%
+                       mutate(Tie.Count = n()) %>%
+                       ungroup()
+  
+  return(df_of_standings)
+}
 
 # (1) Better winning percentage in games against each other
-twoway_tie_breakers_1 <- twoway_tie_breakers %>%
-                           left_join(twoway_tie_breakers, by = c("Conference", "Game.No", "conference_rank_0")) %>%
-                           filter(Team.x != Team.y) %>%
-                           rename("Team"     = "Team.x") %>%
-                           rename("Opponent" = "Team.y") %>% 
-                           left_join(winpct_by_opponent, by = c("Team", "Opponent","Game.No")) %>%
-                           mutate(conference_rank_1_addon = ifelse(!is.na(Win.Pct) & Win.Pct < 0.5, 1, 0)) %>%
-                           select(Team, Game.No, conference_rank_1_addon)
+fun_tiebreaker_2way_rule1 <- function(df_of_standings, df_of_winpct_by_opponent) {
+  #calculates tie-breaker "penalities" based on rule: "(1) Better winning percentage in games against each other"
+  
+  twoway_tie_breakers <- fun_get_twoway_tie_breakers(df_of_standings)
+  
+  tie_breaker_penalities <- twoway_tie_breakers %>%
+                              left_join(twoway_tie_breakers, by = c("Game.No", "Conference", "Conference.Rank")) %>%
+                              filter(Team.x != Team.y) %>%
+                              rename("Team"     = "Team.x") %>%
+                              rename("Opponent" = "Team.y") %>% 
+                              left_join(df_of_winpct_by_opponent, by = c("Team", "Opponent","Game.No")) %>%
+                              mutate(Conference.Rank.Addon = ifelse(!is.na(Win.Pct) & Win.Pct < 0.5, 1, 0)) %>%
+                              select(Team, Game.No, Conference.Rank.Addon)
 
-standings <- standings %>%
-               left_join(twoway_tie_breakers_1, by = c("Team", "Game.No")) %>%
-               mutate(conference_rank_1 = ifelse(!is.na(conference_rank_1_addon),
-                                                 conference_rank_0 + conference_rank_1_addon,
-                                                 conference_rank_0)) %>%
-               mutate(conference_rank_1 = as.integer(conference_rank_1)) %>%
-               select(everything(), -conference_rank_0, -conference_rank_1_addon)
+  fun_recalculate_standings(df_of_standings = df_of_standings, df_of_penalities = tie_breaker_penalities)
+}
 
-standings <- standings %>%
-               group_by(Conference, Game.No, conference_rank_1) %>%
-               mutate(tie_count = n()) %>%
-               ungroup()
+standings <- fun_tiebreaker_2way_rule1(standings, winpct_by_opponent)
 
 # #test: game 70
 # standings %>%
@@ -199,30 +225,28 @@ standings <- standings %>%
 #   arrange(conference_rank_1)
 
 # (2) Division winner (this criterion is applied regardless of whether the tied teams are in the same division).
-twoway_tie_breakers_2 <- standings %>%
-                           filter(tie_count == 2) %>%
-                           arrange(conference_rank_1) %>%
-                           group_by(Game.No, Conference, Win.Total) %>%
-                           mutate(max_division_rank = max(division_rank),
-                                  min_division_rank = min(division_rank)) %>%
-                           ungroup() %>%
-                           mutate(conference_rank_2_addon = ifelse(min_division_rank == 1 & max_division_rank != 1,
-                                                                   ifelse(division_rank == 1, 0, 1),
-                                                                   0)) %>%
-                           select(Game.No, Team, conference_rank_2_addon)
+fun_tiebreaker_2way_rule2 <- function(df_of_standings) {
+  #calculates tie-breaker "penalities" based on rule: "(2) Division winner (this criterion is applied regardless of whether the tied teams are in the same division)."
+  
+  twoway_tie_breakers <- fun_get_twoway_tie_breakers(df_of_standings)
+  twoway_tie_breakers <- twoway_tie_breakers %>%
+                           select(Game.No, Team)
+  
+  tie_breaker_penalities <- twoway_tie_breakers %>%
+                              left_join(df_of_standings, by = c("Game.No", "Team")) %>%
+                              group_by(Game.No, Conference, Conference.Rank) %>%
+                              mutate(Max.Division.Rank = max(Division.Rank),
+                                     Min.Division.Rank = min(Division.Rank)) %>%
+                              ungroup() %>%
+                              mutate(Conference.Rank.Addon = ifelse(Min.Division.Rank == 1 & Max.Division.Rank != 1,
+                                                                    ifelse(Division.Rank == 1, 0, 1),
+                                                                    0)) %>%
+                              select(Game.No, Team, Conference.Rank.Addon)
+  
+  fun_recalculate_standings(df_of_standings = df_of_standings, df_of_penalities = tie_breaker_penalities)
+}
 
-standings <- standings %>%
-               left_join(twoway_tie_breakers_2, by = c("Game.No", "Team")) %>%
-               mutate(conference_rank_2 = ifelse(!is.na(conference_rank_2_addon),
-                                                 conference_rank_1 + conference_rank_2_addon,
-                                                 conference_rank_1)) %>%
-               mutate(conference_rank_2 = as.integer(conference_rank_2)) %>%
-               select(everything(), -conference_rank_1, -conference_rank_2_addon)
-
-standings <- standings %>%
-               group_by(Conference, Game.No, conference_rank_2) %>%
-               mutate(tie_count = n()) %>%
-               ungroup()
+standings <- fun_tiebreaker_2way_rule2(standings)
 
 # #test: game 28
 # standings %>%
@@ -231,83 +255,73 @@ standings <- standings %>%
 #   arrange(conference_rank_2)
 
 # (3) Better winning percentage against teams in own division (only if tied teams are in same division).
-#Step 1: get list of ties within same division
-twoway_tie_breakers <- standings %>%
-                         filter(tie_count == 2) %>%
-                         group_by(Game.No, Conference, conference_rank_2) %>%
-                         mutate(division_count = n_distinct(Division)) %>%
-                         ungroup() %>%
-                         filter(division_count == 1) %>%
-                         select(Game.No, Conference, Division, conference_rank_2, Team) %>%
-                         left_join(winpct_by_division, by = c("Game.No" = "Game.No", "Team" = "Team", "Division" = "Opp. Division"))
-
-#Step2: add win.pct of tied team
-twoway_tie_breakers_3 <-  twoway_tie_breakers %>%
-                            left_join(twoway_tie_breakers, by = c("Game.No", "Division", "conference_rank_2")) %>%
-                            filter(Team.x != Team.y) %>%
-                            rename("Team"     = "Team.x",
-                                   "Opponent" = "Team.y",
-                                   "Win.Pct" = "Win.Pct.x",
-                                   "Opp.Win.Pct" = "Win.Pct.y") %>%
-                            mutate(conference_rank_3_addon = ifelse(!is.na(Win.Pct) & !is.na(Opp.Win.Pct), 
+fun_tiebreaker_2way_rule3 <- function(df_of_standings, df_of_winpct_by_division) {
+  #calculates tie-breaker "penalities" based on rule: "(3) Better winning percentage against teams in own division (only if tied teams are in same division)."
+  
+  twoway_tie_breakers <- fun_get_twoway_tie_breakers(df_of_standings)
+  twoway_tie_breakers <- twoway_tie_breakers %>%
+                           select(Game.No, Team)
+  
+  #Step 1: get list of ties within same division
+  twoway_tie_breakers <- twoway_tie_breakers %>%
+                           left_join(df_of_standings, by = c("Game.No", "Team")) %>%
+                           group_by(Game.No, Conference, Conference.Rank) %>%
+                           mutate(Division.Count = n_distinct(Division)) %>%
+                           ungroup() %>%
+                           filter(Division.Count == 1) %>%
+                           select(Game.No, Conference, Division, Conference.Rank, Team) %>%
+                           left_join(df_of_winpct_by_division, by = c("Game.No" = "Game.No", "Team" = "Team", "Division" = "Opp. Division"))
+  
+  #Step2: add win.pct of tied team & rank-penalty based on that
+  tie_breaker_penalities <- twoway_tie_breakers %>%
+                              left_join(twoway_tie_breakers, by = c("Game.No", "Division", "Conference.Rank")) %>%
+                              filter(Team.x != Team.y) %>%
+                              rename("Team"        = "Team.x",
+                                     "Opponent"    = "Team.y",
+                                     "Win.Pct"     = "Win.Pct.x",
+                                     "Opp.Win.Pct" = "Win.Pct.y") %>%
+                              mutate(Conference.Rank.Addon = ifelse(!is.na(Win.Pct) & !is.na(Opp.Win.Pct), 
                                                                     ifelse(Win.Pct < Opp.Win.Pct, 1, 0),
                                                                     0)) %>%
-                            select(Game.No, Team, conference_rank_3_addon)
+                              select(Game.No, Team, Conference.Rank.Addon)
+  
+  fun_recalculate_standings(df_of_standings = df_of_standings, df_of_penalities = tie_breaker_penalities)
+}
 
-#Step3: check which win.pct is higher, add rank-penalty based on that
-standings <- standings %>%
-               left_join(twoway_tie_breakers_3, by = c("Game.No", "Team")) %>%
-               mutate(conference_rank_3 = ifelse(!is.na(conference_rank_3_addon),
-                                                 conference_rank_2 + conference_rank_3_addon,
-                                                 conference_rank_2)) %>%
-               select(everything(), -conference_rank_2, -conference_rank_3_addon)
-
-#Step4: recalculate ties
-standings <- standings %>%
-              group_by(Conference, Game.No, conference_rank_3) %>%
-              mutate(tie_count = n()) %>%
-              ungroup()
+standings <- fun_tiebreaker_2way_rule3(standings, winpct_by_division)
 
 # #TODO: create test
 # standings %>%
-#   filter(Game.No == 43) %>%
-#   filter(tie_count == 2)
-#
-# twoway_tie_breakers_3 %>% filter(Game.No == 43)
+#   filter(Game.No == 43)
 
 # (4) Better winning percentage against teams in own conference.
-# Step1: list of tied teams, enriched with conf. win %
-twoway_tie_breakers <- standings %>%
-                         filter(tie_count == 2) %>%
-                         left_join(winpct_by_conference, by = c("Game.No" = "Game.No", "Team" = "Team", "Conference" = "Opp. Conference")) %>%
-                         select(Game.No, Conference, Team, conference_rank_3, Win.Pct)
+fun_tiebreaker_2way_rule4 <- function(df_of_standings, df_of_winpct_by_conference) {
+  #calculates tie-breaker "penalities" based on rule: "(4) Better winning percentage against teams in own conference."
+  
+  twoway_tie_breakers <- fun_get_twoway_tie_breakers(df_of_standings)
+  
+  # Step1: list of tied teams, enriched with conf. win %
+  twoway_tie_breakers <- twoway_tie_breakers %>%
+                           left_join(df_of_winpct_by_conference, by = c("Game.No" = "Game.No", "Team" = "Team", "Conference" = "Opp. Conference")) %>%
+                           select(Game.No, Conference, Team, Conference.Rank, Win.Pct)
+  
+  # Step2: add win.pct of tied team & rank-penalty based on that
+  tie_breaker_penalities <- twoway_tie_breakers %>%
+                              left_join(twoway_tie_breakers, by = c("Game.No", "Conference", "Conference.Rank")) %>%
+                              filter(Team.x != Team.y) %>%
+                              rename("Team"        = "Team.x",
+                                     "Opponent"    = "Team.y",
+                                     "Win.Pct"     = "Win.Pct.x",
+                                     "Opp.Win.Pct" = "Win.Pct.y") %>%
+                              mutate(Conference.Rank.Addon = ifelse(!is.na(Win.Pct) & !is.na(Opp.Win.Pct), 
+                                                                      ifelse(Win.Pct < Opp.Win.Pct, 1, 0),
+                                                                      0)) %>%
+                              select(Game.No, Team, Conference.Rank.Addon)
+  
+  fun_recalculate_standings(df_of_standings = df_of_standings, df_of_penalities = tie_breaker_penalities)
+}
 
-#Step2: add win.pct of tied team
-twoway_tie_breakers_4 <-  twoway_tie_breakers %>%
-                            left_join(twoway_tie_breakers, by = c("Game.No", "Conference", "conference_rank_3")) %>%
-                            filter(Team.x != Team.y) %>%
-                            rename("Team"     = "Team.x",
-                                   "Opponent" = "Team.y",
-                                   "Win.Pct" = "Win.Pct.x",
-                                   "Opp.Win.Pct" = "Win.Pct.y") %>%
-                            mutate(conference_rank_4_addon = ifelse(!is.na(Win.Pct) & !is.na(Opp.Win.Pct), 
-                                                                    ifelse(Win.Pct < Opp.Win.Pct, 1, 0),
-                                                                    0)) %>%
-                            select(Game.No, Team, conference_rank_4_addon)
-
-#Step3: check which win.pct is higher, add rank-penalty based on that
-standings <- standings %>%
-               left_join(twoway_tie_breakers_4, by = c("Game.No", "Team")) %>%
-               mutate(conference_rank_4 = ifelse(!is.na(conference_rank_4_addon),
-                                                 conference_rank_3 + conference_rank_4_addon,
-                                                 conference_rank_3)) %>%
-               select(everything(), -conference_rank_3, -conference_rank_4_addon)
-
-#Step4: recalculate ties
-standings <- standings %>%
-               group_by(Conference, Game.No, conference_rank_4) %>%
-               mutate(tie_count = n()) %>%
-               ungroup()
+standings <- fun_tiebreaker_2way_rule4(standings, winpct_by_conference)
 
 # standings %>% filter(tie_count == 2) %>% summarize(m = max(Game.No))
 # twoway_tie_breakers %>% filter(Game.No == 39)
@@ -513,13 +527,13 @@ standings <- standings %>%
                ungroup()
 
 # #TODO: create test
-standings %>%
-  filter(Game.No == 5) %>%
-  filter(Conference == "Eastern") %>%
-  arrange(conference_rank_4)
-
-multiway_tie_breakers_4 %>%
-  filter(Game.No == 5)
+# standings %>%
+#   filter(Game.No == 5) %>%
+#   filter(Conference == "Eastern") %>%
+#   arrange(conference_rank_4)
+# 
+# multiway_tie_breakers_4 %>%
+#   filter(Game.No == 5)
 
 # (5) Better winning percentage against teams eligible for playoffs in own conference (including teams that finished the regular season tied for a playoff position).
 # (6) Better net result of total points scored less total points allowed against all opponents (“point differential”).

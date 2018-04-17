@@ -79,7 +79,7 @@ end_of_regular_season <- standings %>%
 #     facet_grid(~Conference) +
 #     theme_minimal()
 
-end_of_regular_season %>%
+win_totals_plot <- end_of_regular_season %>%
   filter(season %in% c("2014-2015", "2015-2016", "2016-2017", "2017-2018")) %>%
   group_by(Conference, Conference.Rank) %>%
   mutate(Min.Win.Total = min(Win.Total),
@@ -100,14 +100,36 @@ end_of_regular_season %>%
     geom_pointrange(aes(ymin = Min.Win.Total.For.Chart, 
                         ymax = Max.Win.Total.For.Chart, 
                         y = Current.Win.Total.For.Chart, 
-                        color = Conference)) +
+                        color = Conference), fatten = 1.35, size = 1.4) +
+    geom_text(aes(x=-0.75, y = -45, label = "WEST"), size = 10, family = "OCR A Extended", hjust = 1) +
+    geom_text(aes(x=-0.75, y =  45, label = "EAST"), size = 10, family = "OCR A Extended", hjust = 0) +
+    geom_text(aes(x= 9, y = 70, label = "▼ Lottery"),  size = 5, family = "OCR A Extended", hjust = 0, vjust = 1, color = "gray82") +
+    geom_text(aes(x= 8, y = 70, label = "▲ Playoffs"), size = 5, family = "OCR A Extended", hjust = 0, vjust = 0, color = "gray82") +
     coord_flip() +
-    scale_x_reverse(breaks = 15:1) +
+    scale_x_reverse(breaks = 15:1, limits = c(15, -1)) +
+    scale_y_continuous(breaks = c(-82, -60, -41, 0, 41, 60, 82), 
+                       limit  = c(-82,  82), 
+                       labels =  c(82,  60,  41, 0, 41, 60, 82)) +
+    scale_color_manual(breaks = c("Eastern", "Western"), values=c("blue4", "red4")) +
     geom_hline(yintercept = 0) +
-    geom_vline(xintercept = 8.5) +
+    geom_vline(xintercept = 8.5, linetype = "dashed", size = 1, color = "gray82") +
+    labs(title = "Race across 3. - 10. seeds was tightest in recent years",
+         subtitle = "Last four seasons - latest marked by dots",
+         x = "End of season position",
+         y = "Total Wins",
+         caption = "Data source: basketball-reference.com") +
     theme_minimal() + 
     theme(panel.grid.minor = element_blank(),
           panel.grid.major = element_blank()) +
+    theme(text          = element_text(size = 13, family = "OCR A Extended")) +
+    theme(plot.title    = element_text(size = 19),
+          plot.subtitle = element_text(color = "gray60"),
+          plot.caption  = element_text(color = "gray60"),
+          legend.position = "none") +
     theme(legend.position = "none")
 
-?geom_pointrange
+
+ggsave(file = "win_totals_plot.png", plot = win_totals_plot, 
+       dpi = 600, width = 30, height = 20, units = "cm", limitsize = FALSE)
+
+?geom_vline

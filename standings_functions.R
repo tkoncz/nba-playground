@@ -4,7 +4,7 @@ library(dplyr)
 fun_create_game_list <- function(df_of_schedule, season_id, df_of_teams) {
   
   season <- df_of_schedule %>%
-    filter(Season == "2017-2018")
+    filter(Season == season_id)
   
   season <- season %>%
     mutate(Home.W = (Home.Points > Away.Points),

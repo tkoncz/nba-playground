@@ -1,0 +1,81 @@
+---
+title: "Was this the closest race for the NBA Playoffs ever?"
+author: "Tamas Koncz"
+date: '2018-04-21'
+slug: nba-playoff-race-2018
+tags:
+- R
+- nba
+categories: sports
+---
+
+```{r setup, message=FALSE, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+library(knitr)
+``` 
+  
+  
+##### This question probably got decided the second the Denver Nuggets took the Timberwolves to overtime for the 8th and last playoff-worthy position in West, _on the last day of the regular season..._ but that should not stop us from looking back at what has transpired at finish line before the Playoffs with the help of some data.  
+
+### Teams have moved up and down the standings like never before  
+
+Teams have switched positions a lot during the run-up of this season's finale... and I wanted to see how abnormal this was.  
+  
+  
+First, I decided to treat each game as its own "round", so that we can look at all teams at points when they played the exact same number of games.  
+This gives us a better view for an "if the Playoffs would start today..." type of analysis, while no question it still disregards certain elements (e.g.  that teams are not playing at the same rate at home & away), and the "calendar-view" might be better if we wanted to incorporate factors like the strength of schedule.  
+  
+The path to the final standings were the most spagetti-like between the 3. and 10. seeds in the West.  
+By the last game, the Thunder jumped ahead **3** places, to overtake the Jazz whose *14 game run from 10th to 3rd* between game 66 and 81 deserves nothing but respect, and even though they finished "only" 5th at the end, they should not be dissappointed for a minute, given they spent majority of the regular season outside of the playoff-picture.[^1]  
+  
+
+<center>
+![](west_playoff_race.png){width=75%}
+</center>
+  
+Let's put this into perspective: since Lebron James' first made the Playoffs, the average season has seen 56 and 66 standing changes after Game 60, in the East and West respectively.[^2]  
+This year? 62 for the Eastern Conference, while a whopping **120** in the wild-wild West. That's close to double the previous 12-years average! The only other time this number went above 100 was last year, in the East.[^3]  
+  
+  
+The above numbers can mask how interesting these standing changes can be - let's be honest, no one really cares if a 12th placed team drops to 13th...[^4]  
+Let's try to do someting about this: instead of counting moves in the standings, let's count only cases when teams move in or out of Playoff positions.  
+In the East, after game 60, there are 6 of these moves on average, while this season we've seen 0.  
+The West saw maybe less drama in the past, with only 2 times to have in/out playoff-position moves... but oh did this season make up for it with 8! _And this 8 does not even capture tight situations like the one between Denver and Minnesota..._
+  
+  
+### What made this year so special?  
+  
+To understand this we have to first understand where competition was coming from. Both conferences had the top 2 teams stand out - but this is the end of commonalities. While the East had a gradual separation of teams between 3. and 8., the West was really chaotic in the middle.  
+
+<center>
+![](win_totals_plot.png){width=65%}
+</center>  
+  
+It's interesting to see that in both Conferences, the Top8 teams would have made the Playoffs in each of the last four years as well, based on their Win Totals. In the West, this is even true for Denver, while Detroit has fallen further behind in the East.  
+  
+This could make us confident that the middle-teams are actually strong this year. But then who got relatively weaker, the top or the bottom?
+  
+After a few years of historical dominance by the Warriors (and the Cavaliers, but they did not demonstrate it during the regular seasons) one could expect that it was time for the top to fell off. But that doesn't seem to be true!  
+  
+The Rockets and the Warriors are still separated from the rest of the pack by a wide margin, while there is nothing to suggest that the East is different than before (at least as far as the regular season goes, referring back to the Cavs). 
+
+<center>
+![](gb_plot.png){width=65%}
+</center>
+
+Games behind (GB) is a good measure of competition among teams. This shows that the West has some really good teams on top, some better than average teams in the middle, and embarrasingly bad teams at the bottom. In the East, if anything, all ranks have became more "average" than before.  
+
+The reasons? Well, I will leave that to the experts.[^5] For now, let's enjoy some playoff basketball, after a long, and surprisingly wild and fun regular season.  
+
+
+
+[^1]: At the time I'm writing this, OKC and the Jazz are tied 1-1, and are heading into the 3 game in Utah. Let's see if they can prove that they are the better team, even without home-court advantage.
+[^2]: It's a fair question to ask why Game 60? There is nothing magical about this number. By the each team hits this mark, it should be enough time after the All-Star break for Standings to stabilize, and for us to get a good-look into how good they are.
+[^3]: There is nothing to suggest that the East has seen more significantly more drama than before, even if the number is a notch above the longer-term trend. 
+[^4]: Starting this year the implications for the draft are also getting less significant.
+[^5]: Hint: it's tanking. And maybe stars fleeing the East to avoid facing Lebron.
+
+***
+**Note on methodology:** all codes used to create this analysis can be found in my messy [Github repo](https://github.com/tomiaJO/nba_playground). I do have very-long-term plans to clean this up, and maybe even wrap the main pieces I use for NBA analysis in a package, but in the meantime feel free to reach out in email if you have any questions or suggestions.

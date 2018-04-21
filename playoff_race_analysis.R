@@ -152,13 +152,14 @@ gb_plot <- end_of_regular_season %>%
   filter(season == "2017-2018") %>%
   mutate(Avg.GB.First = (Sum.GB.First - GB.First) / (n-1)) %>%
   mutate(Conference = ifelse(Conference == "Western", "WEST", "EAST")) %>%
+  mutate(Conference = factor(Conference, levels = c("WEST", "EAST"))) %>%
   ggplot(aes(x = Conference.Rank)) +
     geom_area(aes(y = Avg.GB.First), fill = "grey70") +
     geom_area(aes(y = GB.First),     fill = "navyblue", alpha = 0.4) +
-    geom_text(data = data.frame(Conference = "EAST", x=15, y=44, lab="2017-18"), aes(x, y, label = lab), hjust = 1, color = "navyblue", alpha = 0.8, fontface = "bold", family = "OCR A Extended") +
-    geom_text(data = data.frame(Conference = "EAST", x=15, y=42, lab="Prev. seasons' avg."), aes(x, y, label = lab), hjust = 1, color = "grey70", fontface = "bold", family = "OCR A Extended") +
-    geom_text(data = data.frame(Conference = "WEST", x=15, y=50, lab="2017-18"), aes(x, y, label = lab), hjust = 1, color = "navyblue", alpha = 0.8, fontface = "bold", family = "OCR A Extended") +
-    geom_text(data = data.frame(Conference = "WEST", x=15, y=48, lab="Prev. seasons' avg."), aes(x, y, label = lab), hjust = 1, color = "grey70", fontface = "bold", family = "OCR A Extended") +
+    geom_text(data = data.frame(Conference = "EAST", x=15, y=46, lab="2017-18"), aes(x, y, label = lab), hjust = 1, color = "navyblue", alpha = 0.8, fontface = "bold", family = "OCR A Extended") +
+    geom_text(data = data.frame(Conference = "EAST", x=15, y=44, lab="Prev. seasons' avg."), aes(x, y, label = lab), hjust = 1, color = "grey70", fontface = "bold", family = "OCR A Extended") +
+    geom_text(data = data.frame(Conference = "WEST", x=15, y=48, lab="2017-18"), aes(x, y, label = lab), hjust = 1, color = "navyblue", alpha = 0.8, fontface = "bold", family = "OCR A Extended") +
+    geom_text(data = data.frame(Conference = "WEST", x=15, y=46, lab="Prev. seasons' avg."), aes(x, y, label = lab), hjust = 1, color = "grey70", fontface = "bold", family = "OCR A Extended") +
     scale_x_continuous(breaks = 2:15,          labels = 2:15) + 
     scale_y_continuous(breaks = seq(0, 50, 5), labels = seq(0, 50, 5), limits = c(0, 50)) + 
     facet_grid(.~Conference) +
@@ -178,3 +179,40 @@ gb_plot <- end_of_regular_season %>%
 
 ggsave(file = "gb_plot.png", plot = gb_plot, 
        dpi = 600, width = 30, height = 20, units = "cm", limitsize = FALSE)
+
+## switching places - by the numbers
+
+standings <- fread(file = "C:/Users/tkonc/Documents/Data/NBA Playground/standings_backup.csv") 
+
+pos_chgs_after_60 <- standings %>%
+                       filter(!season %in% c("2004-2005", "2011-2012")) %>% 
+                       select(season, Team, Game.No, Conference, Conference.Rank) %>%
+                       arrange(season, Conference, Team, Game.No)  %>%
+                       group_by(season, Team) %>%
+                       mutate(Prev.Conference.Rank = lag(Conference.Rank)) %>% 
+                       ungroup() %>% 
+                       filter(Game.No >= 60) 
+
+pos_chgs_after_60 %>% 
+  mutate(Pos.Move = abs(Prev.Conference.Rank - Conference.Rank)) %>%
+  group_by(season, Conference) %>%
+  summarize(Pos.Move = sum(Pos.Move)) %>%
+  tidyr::spread(key= Conference, value = Pos.Move) %>%
+  group_by(season == "2017-2018") %>%
+  summarize(Eastern = median(Eastern),
+            Western = median(Western))
+
+pos_chgs_after_60 %>% 
+  mutate(In.PO  = ifelse(Prev.Conference.Rank >  8 & Conference.Rank <= 8, 1, 0),
+         Out.PO = ifelse(Prev.Conference.Rank <= 8 & Conference.Rank >  8, 1, 0)) %>%
+  mutate(In.Out.PO = In.PO + Out.PO) %>% 
+  group_by(season, Conference) %>%
+  summarize(In.Out.PO = sum(In.Out.PO)) %>%
+  tidyr::spread(key= Conference, value = In.Out.PO) %>%
+  group_by(season == "2017-2018") %>%
+  summarize(Eastern = median(Eastern),
+            Western = median(Western))
+  
+  
+# %>%
+#   group_by(season, Conference) %>%

@@ -80,13 +80,14 @@ plotInGameStatsVsPointDiff <- function(dt) {
     facet_wrap(~variable, scales = "free_x", ncol = 6) +
     geom_smooth(method = "lm") +
     labs(title = "Russ' in game stats vs. final point difference",
+         subtitle = "Based on the '16-17 and '17-18 regular seasons",
          x     = "") +
     scale_color_manual(values=c("gray82", "#0072CE")) +
     theme_minimal() +
     # theme(panel.grid.minor = element_blank(),
     #       panel.grid.major = element_blank()) +
     theme(text          = element_text(size = 11, family = "OCR A Extended")) +
-    theme(plot.title    = element_text(size = 18),
+    theme(plot.title    = element_text(size = 20),
           plot.caption  = element_text(color = "gray60")) +
     theme(legend.position = "none")
   

@@ -108,3 +108,54 @@ getListOfInGameStatistics <- function() {
     "FG%", "3P%", "FT%", "DRB", "STL", "BLK"
   )
 }
+
+plotWinPctVsRussHadTDorNot <- function() {
+  last_2_yr_avg_win_pct <- data.frame(
+    team = c("GSW", "8. seed", "PHX"),
+    avg_win_pct = c((58 + 67) / (2 * 82), (47 + 41) / (2 * 82), (21 + 24) / (2 * 82))
+  )
+  
+  data.table(
+    `Win%` = c(1:1000) / 1000,
+    `No Triple-Double` = dbeta(c(1:1000)/1000, 40, 54),
+    `Triple-Double` = dbeta(c(1:1000)/1000, 53, 14)
+  ) %>% 
+    melt(id.vars = "Win%") %>% 
+    ggplot(aes(x = `Win%`, y = value, fill = variable)) +
+    geom_area(size = 0) +
+    scale_fill_manual(values = c("gray82", "#0072CE")) +
+    geom_text(
+      data = last_2_yr_avg_win_pct, 
+      mapping = aes(x = avg_win_pct, y = 8.5, label = team, color = team), 
+      inherit.aes = F, hjust = -.1, family = "OCR A Extended"
+    ) +
+    geom_vline(
+      data = last_2_yr_avg_win_pct, 
+      mapping = aes(xintercept = avg_win_pct, color = team),
+      linetype = "dotted"
+    ) +
+    scale_color_manual( 
+      values = c("black", "#FDB927", "#E56020"), 
+      guide = FALSE
+    ) +
+    labs(title = "OKC's win probability distributions",
+         subtitle = "Based on the '16-17 and '17-18 regular seasons",
+         y = "") +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank(),
+          axis.text.y = element_blank()) +
+    theme(text          = element_text(size = 10, family = "OCR A Extended")) +
+    theme(plot.title    = element_text(size = 18),
+          plot.caption  = element_text(color = "gray60")) +
+    theme(legend.position = "top",
+          legend.title=element_blank())
+  
+  ggsave(
+    filename = "Westbrook Triple-Doubles/Figures/westbrook_win_pct_td_vs_no_td.png",
+    device = "png", 
+    dpi = 600, 
+    width = 6, 
+    height = 4
+  )
+}

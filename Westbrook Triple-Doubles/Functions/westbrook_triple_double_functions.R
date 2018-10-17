@@ -1,6 +1,6 @@
-getWestbrookRawStatsFromBR <- function(season) {
+getRawStatsFromBR <- function(player_id, season) {
   
-  season_url <- glue("https://www.basketball-reference.com/players/w/westbru01/gamelog/{season}")
+  season_url <- glue("https://www.basketball-reference.com/players/w/{player_id}/gamelog/{season}")
   
   read_html(season_url) %>%
     html_nodes("table") %>% 
@@ -18,12 +18,7 @@ fixRawColumns_ <- function(westbrook_raw_data_from_br) {
                "FG%", "3P", "3PA", "3P%", "FT", "FTA",
                "FT%", "ORB", "DRB", "TRB", "AST", "STL",
                "BLK", "TOV", "PF", "PTS", "GmSc", "+/-",
-               "season", "V1", "V2", "V3")) %>% 
-    .[season == 2018, `:=`(Away = V1,
-                           Result = V2)] %>% 
-    .[, `:=`(V1 = NULL,
-             V2 = NULL,
-             V3 = NULL)] %>% 
+               "season")) %>% 
     .[, G := Rk] %>%
     .[, Rk := NULL]
 }

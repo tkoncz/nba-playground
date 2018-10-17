@@ -3,7 +3,7 @@ source("Westbrook Triple-Doubles/Global.R")
 seasons <- c(2017:2018)
 
 ## ----
-westbrook_raw_data_from_br <- map_df(seasons, getWestbrookRawStatsFromBR)
+westbrook_raw_data_from_br <- map(seasons, ~{getRawStatsFromBR("westbru01", .x)}) %>% rbindlist()
 
 fixRawColumns_(westbrook_raw_data_from_br)
 westbrook_data_from_br <- fixRawRows(westbrook_raw_data_from_br)
@@ -30,6 +30,3 @@ westbrook_data_from_br[!is.na(`Triple-Double`), .(Games = .N, Won = sum(`Won?`))
 
 plotWinPctVsRussHadTDorNot()
 ## TODO: this runs on hardcoded numbers as of now
-
-
-## ----

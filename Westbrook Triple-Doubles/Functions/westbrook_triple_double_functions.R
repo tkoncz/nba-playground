@@ -71,13 +71,13 @@ plotInGameStatsVsPointDiff <- function(dt) {
     .[, mget(c("Point Difference", "Won?", in_game_statistics))] %>% 
     melt(id.vars = c("Point Difference", "Won?"), measure.vars = in_game_statistics) %>% 
     ggplot(aes(x = value, y = `Point Difference`)) +
-    geom_point(aes(color = `Won?`)) +
+    geom_point(aes(color = ifelse(`Won?`, "Won", "Lost"))) +
     facet_wrap(~variable, scales = "free_x", ncol = 6) +
     geom_smooth(method = "lm") +
     labs(title = "Russ' in game stats vs. final point difference",
          subtitle = "Based on the '16-17 and '17-18 regular seasons",
          x     = "") +
-    scale_color_manual(values=c("gray82", "#0072CE")) +
+    scale_color_manual(values = c("Lost" = "#EF3B24", "Won" = "#007AC1")) +
     theme_minimal() +
     # theme(panel.grid.minor = element_blank(),
     #       panel.grid.major = element_blank()) +
@@ -104,21 +104,27 @@ getListOfInGameStatistics <- function() {
   )
 }
 
-plotWinPctVsRussHadTDorNot <- function() {
+
+plotWinPctVsPlayerHadTDorNot <- function(dt) {
   last_2_yr_avg_win_pct <- data.frame(
     team = c("GSW", "8. seed", "PHX"),
     avg_win_pct = c((58 + 67) / (2 * 82), (47 + 41) / (2 * 82), (21 + 24) / (2 * 82))
   )
   
+  td_w    <- won_lost_by_had_td[`Triple-Double` == TRUE][["Won"]]
+  td_l    <- won_lost_by_had_td[`Triple-Double` == TRUE][["Lost"]]
+  no_td_w <- won_lost_by_had_td[`Triple-Double` == FALSE][["Won"]]
+  no_td_l <- won_lost_by_had_td[`Triple-Double` == FALSE][["Lost"]]
+  
   data.table(
     `Win%` = c(1:1000) / 1000,
-    `No Triple-Double` = dbeta(c(1:1000)/1000, 40, 54),
-    `Triple-Double` = dbeta(c(1:1000)/1000, 53, 14)
+    `No Triple-Double` = dbeta(c(1:1000)/1000, no_td_w, no_td_l),
+    `Triple-Double` = dbeta(c(1:1000)/1000, td_w, td_l)
   ) %>% 
     melt(id.vars = "Win%") %>% 
     ggplot(aes(x = `Win%`, y = value, fill = variable)) +
     geom_area(size = 0) +
-    scale_fill_manual(values = c("gray82", "#0072CE")) +
+    scale_fill_manual(values = c("Triple-Double" = "#002D62", "No Triple-Double" = "#FDBB30")) +
     geom_text(
       data = last_2_yr_avg_win_pct, 
       mapping = aes(x = avg_win_pct, y = 8.5, label = team, color = team), 
@@ -130,10 +136,10 @@ plotWinPctVsRussHadTDorNot <- function() {
       linetype = "dotted"
     ) +
     scale_color_manual( 
-      values = c("black", "#FDB927", "#E56020"), 
+      values = c("8. seed" = "black", "GSW" = "#FDB927", "PHX" = "#E56020"), 
       guide = FALSE
     ) +
-    labs(title = "OKC's win probability distributions",
+    labs(title = "OKC's win probability distributions if Russ had...",
          subtitle = "Based on the '16-17 and '17-18 regular seasons",
          y = "") +
     theme_minimal() +
@@ -150,7 +156,14 @@ plotWinPctVsRussHadTDorNot <- function() {
     filename = "Westbrook Triple-Doubles/Figures/westbrook_win_pct_td_vs_no_td.png",
     device = "png", 
     dpi = 600, 
-    width = 6, 
-    height = 4
+    width = 10, 
+    height = 6
   )
+}
+
+createBreakdownOfWinLossByTDorNot <- function(dt) {
+  dt %>% 
+    .[!is.na(`Triple-Double`), .(Games = .N, Won = sum(`Won?`)), by = `Triple-Double`] %>% 
+    .[, `:=`(Lost = Games - Won,
+             `Win%` = Won / Games)]
 }

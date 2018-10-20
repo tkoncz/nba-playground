@@ -1,4 +1,4 @@
-getRawStatsFromBR <- function(player_id, season) {
+getRawPlayerGameLogsForSeasonFromBR <- function(player_id, season) {
   
   season_url <- glue("https://www.basketball-reference.com/players/w/{player_id}/gamelog/{season}")
   

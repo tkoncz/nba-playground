@@ -217,3 +217,48 @@ plotPointDiffVsStatsRegressionCoeffs <- function(dt) {
     height = 6
   )
 }
+
+plotASTandTRBDistributions <- function(dt) {
+
+  rbind(
+    dt[, .(n = .N, Stat = "AST"), by = .(value = AST)],
+    dt[, .(n = -1 * .N, Stat = "TRB"), by = .(value = TRB)]
+  ) %>% 
+    ggplot(aes(x = value, y = n, fill = Stat)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual( 
+      values = c("AST" = "#002D62", "TRB" = "#007AC1")
+    ) +
+    geom_vline(xintercept = 9.525, color = "#EF3B24") +
+    geom_text(
+      aes(x = 10, y = 25), label = "10+", color = "#EF3B24", 
+      family = "OCR A Extended"
+    ) +
+    labs(
+      title = "Distribution of Assits and Total Rebounds for Westbrook",
+      subtitle = "Based on the '16-17 and '17-18 regular seasons",
+      x = "",
+      y = "# of occurences"
+    ) +
+    coord_flip() +
+    scale_x_reverse() +
+    scale_y_continuous(
+      breaks = c(-20,-10,0,10,20),
+      labels = c(20,10,0,10,20),
+      limits = c(-25,25)
+    ) +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank()) +
+    theme(text          = element_text(size = 11, family = "OCR A Extended")) +
+    theme(plot.title    = element_text(size = 18),
+          plot.caption  = element_text(color = "gray60")) +
+    theme(legend.position = "right")
+
+  ggsave(
+    filename = "Westbrook Triple-Doubles/Figures/westbrook_ast_trb_distributions.png",
+    device = "png",
+    dpi = 600,
+    width = 9,
+    height = 7
+  )
+}

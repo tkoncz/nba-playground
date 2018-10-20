@@ -1,4 +1,4 @@
-source("Westbrook Triple-Doubles/Global.R")
+source('Westbrook Triple-Doubles/Global.R')
 
 seasons <- c(2017:2018)
 
@@ -29,7 +29,6 @@ russ_won_lost_by_had_td <- createBreakdownOfWinLossByTDorNot(westbrook_data_from
 russ_won_lost_by_had_td %>% .[]
 
 plotWinPctVsPlayerHadTDorNot(russ_won_lost_by_had_td)
-## TODO: this runs on hardcoded numbers as of now
 
 
 ## ----
@@ -37,4 +36,4 @@ plotPointDiffVsStatsRegressionCoeffs(westbrook_data_from_br)
 
 
 ## ----
-#frequency of ~9 AST/ RBD games
+plotASTandTRBDistributions(westbrook_data_from_br)

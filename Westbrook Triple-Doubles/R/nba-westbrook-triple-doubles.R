@@ -4,7 +4,11 @@ seasons <- c(2017:2018)
 
 ## ---- download data
 westbrook_raw_data_from_br <- map(seasons, ~{
-    getRawPlayerGameLogsForSeasonFromBR("westbru01", .x)
+    getRawPlayerGameLogsForSeasonFromBR(
+        player_id   = "westbru01", 
+        season      = .x, 
+        refetch     = FALSE,
+        folder      = "Westbrook Triple-Doubles/Data")
 }) %>% rbindlist()
 
 ## -- fix general formatting issues

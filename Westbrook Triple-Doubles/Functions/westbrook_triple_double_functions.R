@@ -161,6 +161,20 @@ plotWinPctVsPlayerHadTDorNot <- function(won_lost_by_had_td) {
   )
 }
 
+
+flagDoubleTripleQuadrupleDoublesForPlayer_ <- function(dt) {
+    dt %>%
+        .[, 
+            ten_plus_stat_categories := .(rowSums(.SD>=10)),
+            .SDcols = c("PTS", "TRB", "AST", "STL", "BLK")
+        ] %>%
+        .[, `:=`(`Double-Double`    = ten_plus_stat_categories >= 2,
+                 `Triple-Double`    = ten_plus_stat_categories >= 3,
+                 `Quadruple-Double` = ten_plus_stat_categories >= 4)
+        ]
+}
+
+
 createBreakdownOfWinLossByTDorNot <- function(dt) {
   dt %>% 
     .[!is.na(`Triple-Double`), .(Games = .N, Won = sum(`Won?`)), by = `Triple-Double`] %>% 

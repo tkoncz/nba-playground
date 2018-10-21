@@ -32,34 +32,48 @@ fixRawRows <- function(dt) {
 addResultColumns_ <- function(dt) {
   dt %>%
     .[, `Won?` := grepl("^W", Result)] %>% 
-    .[, `Point Difference` := as.numeric(str_match(Result, "\\((\\+|-)(.+)\\)")[, 3])] %>%
+    .[, `Point Difference` := as.integer(str_match(Result, "\\((\\+|-)(.+)\\)")[, 3])] %>%
     .[, `Point Difference` := ifelse(!`Won?`, -1, 1) * `Point Difference`]
 }
 
 
 fixColumnFormats_ <- function(dt) {
-  dt %>% 
-    .[, `:=`(G     = as.numeric(G),
-             Date  = as.Date(Date, format = "%Y-%m-%d"),
-             FG    = ifelse(FG    == "Did Not Play", NA, as.numeric(FG)), 
-             FGA   = ifelse(FGA   == "Did Not Play", NA, as.numeric(FGA)), 
-             `FG%` = ifelse(`FG%` == "Did Not Play", NA, as.numeric(`FG%`)), 
-             `3P`  = ifelse(`3P`  == "Did Not Play", NA, as.numeric(`3P`)), 
-             `3PA` = ifelse(`3PA` == "Did Not Play", NA, as.numeric(`3PA`)), 
-             `3P%` = ifelse(`3P%` == "Did Not Play", NA, as.numeric(`3P%`)), 
-             FT    = ifelse(FT    == "Did Not Play", NA, as.numeric(FT)), 
-             FTA   = ifelse(FTA   == "Did Not Play", NA, as.numeric(FTA)), 
-             `FT%` = ifelse(`FT%` == "Did Not Play", NA, as.numeric(`FT%`)), 
-             ORB   = ifelse(ORB   == "Did Not Play", NA, as.numeric(ORB)),  
-             DRB   = ifelse(DRB   == "Did Not Play", NA, as.numeric(DRB)), 
-             TRB   = ifelse(TRB   == "Did Not Play", NA, as.numeric(TRB)), 
-             AST   = ifelse(AST   == "Did Not Play", NA, as.numeric(AST)), 
-             STL   = ifelse(STL   == "Did Not Play", NA, as.numeric(STL)), 
-             BLK   = ifelse(BLK   == "Did Not Play", NA, as.numeric(BLK)), 
-             TOV   = ifelse(TOV   == "Did Not Play", NA, as.numeric(TOV)), 
-             PF    = ifelse(PF    == "Did Not Play", NA, as.numeric(PF)), 
-             PTS   = ifelse(PTS   == "Did Not Play", NA, as.numeric(PTS)), 
-             GmSc  = ifelse(GmSc  == "Did Not Play", NA, as.numeric(GmSc)))]
+    ## special columns: G, Date
+    dt[, `:=`(
+        G    = as.integer(G),
+        Date = as.Date(Date, format = "%Y-%m-%d"))
+    ]
+
+    ## special column: Age
+    dt[, c("age_years", "age_days") := tstrsplit(Age, "-")] %>%
+        .[, Age := as.numeric(age_years) + as.numeric(age_days) / 365] %>%
+        .[, `:=`(age_years = NULL, age_days = NULL)] # clean-up
+    
+    ## special column: MP
+    dt[, c("MP_minutes", "MP_seconds") := tstrsplit(MP, ":")] %>%
+        .[, MP := as.numeric(MP_minutes) + as.numeric(MP_seconds) / 60] %>%
+        .[, MP := ifelse(is.na(MP), 0, MP)] %>%
+        .[, `:=`(MP_minutes = NULL, MP_seconds = NULL)] # clean-up
+
+    ## numeric columns
+    dt[, `:=`(`FG%` = as.numeric(`FG%`), 
+              `3P%` = as.numeric(`3P%`), 
+              `FT%` = as.numeric(`FT%`), 
+              GmSc  = as.numeric(GmSc))
+    ]
+
+    ## integer columns
+    dt[, `:=`(`3P`  = as.integer(`3P`), `3PA` = as.integer(`3PA`))]
+    # ## TODO: figure out how to handle the `` in variable names...
+
+    integer_columns <- list(
+        "FG", "FGA", "FT", "FTA", "ORB", "DRB", "TRB", 
+        "AST", "STL", "BLK", "TOV", "PF", "PTS"
+    )
+
+    walk(integer_columns, ~{dt[, (.x) := as.integer(get(.x))]})
+
+    dt
 }
 
 

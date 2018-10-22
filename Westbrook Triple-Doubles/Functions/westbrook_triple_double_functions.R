@@ -1,16 +1,3 @@
-fixRawColumns_ <- function(westbrook_raw_data_from_br) {
-  westbrook_raw_data_from_br %>% 
-    setnames(c("Rk", "G",  "Date",  "Age", "Tm", "Away",
-               "Opp", "Result", "GS", "MP", "FG", "FGA",
-               "FG%", "3P", "3PA", "3P%", "FT", "FTA",
-               "FT%", "ORB", "DRB", "TRB", "AST", "STL",
-               "BLK", "TOV", "PF", "PTS", "GmSc", "+/-",
-               "season")) %>% 
-    .[, G := Rk] %>%
-    .[, Rk := NULL]
-}
-
-
 fixRawRows <- function(dt) {
   dt[G != "Rk"]
 }
@@ -43,19 +30,20 @@ fixColumnFormats_ <- function(dt) {
         .[, `:=`(MP_minutes = NULL, MP_seconds = NULL)] # clean-up
 
     ## numeric columns
-    dt[, `:=`(`FG%` = as.numeric(`FG%`), 
-              `3P%` = as.numeric(`3P%`), 
-              `FT%` = as.numeric(`FT%`), 
-              GmSc  = as.numeric(GmSc))
-    ]
+    numeric_columns <- list(
+        "FG%", "3P%", "FT%", "GmSc",
+        "TS%", "eFG%", "ORB%", "DRB%", "TRB%", "AST%", 
+        "STL%", "BLK%", "TOV%", "USG%"
+    )
 
+    walk(numeric_columns, ~{dt[, (.x) := as.numeric(get(.x))]})
+    
     ## integer columns
-    dt[, `:=`(`3P`  = as.integer(`3P`), `3PA` = as.integer(`3PA`))]
-    # ## TODO: figure out how to handle the `` in variable names...
-
     integer_columns <- list(
         "FG", "FGA", "FT", "FTA", "ORB", "DRB", "TRB", 
-        "AST", "STL", "BLK", "TOV", "PF", "PTS"
+        "AST", "STL", "BLK", "TOV", "PF", "PTS", 
+        "+/-", "3P", "3PA",
+        "ORtg", "DRtg"
     )
 
     walk(integer_columns, ~{dt[, (.x) := as.integer(get(.x))]})
@@ -73,15 +61,13 @@ plotInGameStatsVsPointDiff <- function(dt) {
     melt(id.vars = c("Point Difference", "Won?"), measure.vars = in_game_statistics) %>% 
     ggplot(aes(x = value, y = `Point Difference`)) +
     geom_point(aes(color = ifelse(`Won?`, "Won", "Lost"))) +
-    facet_wrap(~variable, scales = "free_x", ncol = 6) +
+    facet_wrap(~variable, scales = "free_x", ncol = 5) +
     geom_smooth(method = "lm") +
     labs(title = "Russ' in game stats vs. final point difference",
          subtitle = "Based on the '16-17 and '17-18 regular seasons",
          x     = "") +
     scale_color_manual(values = c("Lost" = "#EF3B24", "Won" = "#007AC1")) +
     theme_minimal() +
-    # theme(panel.grid.minor = element_blank(),
-    #       panel.grid.major = element_blank()) +
     theme(text          = element_text(size = 11, family = "OCR A Extended")) +
     theme(plot.title    = element_text(size = 20),
           plot.caption  = element_text(color = "gray60")) +
@@ -91,20 +77,18 @@ plotInGameStatsVsPointDiff <- function(dt) {
     filename = "Westbrook Triple-Doubles/Figures/westbrook_in_game_stats_vs_point_difference.png",
     device = "png", 
     dpi = 600, 
-    width = 12, 
-    height = 8
+    width = 10, 
+    height = 10
   )
 }
 
 
 getListOfInGameStatistics <- function() {
-  c(
-    "FG",  "3P",  "FT",  "TRB", "AST", "PTS",
-    "FGA", "3PA", "FTA", "ORB", "TOV", "PF",
-    "FG%", "3P%", "FT%", "DRB", "STL", "BLK"
-  )
+  c("FG",   "FGA", "FG%",  "TRB", "TRB%",
+    "3P",   "3PA", "3P%",  "ORB", "ORB%",
+    "FT",   "FTA", "FT%",  "DRB", "DRB%",
+    "PTS",  "TS%", "USG%", "AST", "TOV")
 }
-
 
 plotWinPctVsPlayerHadTDorNot <- function(won_lost_by_had_td) {
   last_2_yr_avg_win_pct <- data.frame(

@@ -1,4 +1,4 @@
-getRawPlayerGameLogsForSeasonFromBR <- function(player_id,
+getPlayerGameLogsForSeasonFromBR <- function(player_id,
                                                 season,
                                                 refetch = FALSE,
                                                 folder) {
@@ -8,24 +8,65 @@ getRawPlayerGameLogsForSeasonFromBR <- function(player_id,
     if(refetch == TRUE | !file.exists(file_path)) {
         message("Querying from basketball-reference.com...")
 
-        season_url <- glue("https://www.basketball-reference.com/players/w/{player_id}/gamelog/{season}")
-  
-        raw_player_game_log_for_season <- read_html(season_url) %>%
-            html_nodes("table") %>% 
-            `[[`(8) %>% 
-            html_table(header = TRUE, fill = TRUE) %>% 
-            as.data.table() %>%
-            .[, season := season]
+        raw_player_game_log_for_season <- glue(
+            "https://www.basketball-reference.com/players/w/{player_id}/gamelog/{season}"
+        ) %>% 
+            getTableFromHTML(8) %>%
+            fixColumnNamesInPlayerGameLog_()
 
-        fwrite(x = raw_player_game_log_for_season, file = file_path)
+        raw_player_advanced_game_log_for_season <- glue(
+            "https://www.basketball-reference.com/players/w/{player_id}/gamelog-advanced/{season}"
+        ) %>%
+            getTableFromHTML(1) %>%
+            selectOnlyAdvancedStats()            
+            
+        raw_player_game_log_for_season_w_advanced <- merge(
+            raw_player_game_log_for_season,
+            raw_player_advanced_game_log_for_season,
+            by = "Rk",
+            all.x = TRUE
+        ) %>% 
+            .[, season := season] %>% 
+            .[, G := Rk] %>%
+            .[, Rk := NULL]
+
+        fwrite(x = raw_player_game_log_for_season_w_advanced, file = file_path)
 
     } else {
         message("Loading from existing .csv file...")
 
-        raw_player_game_log_for_season <- fread(file_path)
+        raw_player_game_log_for_season_w_advanced <- fread(file_path)
     }
 
-    raw_player_game_log_for_season
+    raw_player_game_log_for_season_w_advanced
+}
+
+
+getTableFromHTML <- function(url, table_num) {
+    url %>% 
+    read_html() %>%
+        html_nodes("table") %>% 
+        `[[`(table_num) %>% 
+        html_table(header = TRUE, fill = TRUE) %>% 
+        as.data.table()
+}
+
+
+fixColumnNamesInPlayerGameLog_ <- function(dt) {
+    dt %>% 
+        setnames(c("Rk", "G",  "Date",  "Age", "Tm", "Away",
+                   "Opp", "Result", "GS", "MP", "FG", "FGA",
+                   "FG%", "3P", "3PA", "3P%", "FT", "FTA",
+                   "FT%", "ORB", "DRB", "TRB", "AST", "STL",
+                   "BLK", "TOV", "PF", "PTS", "GmSc", "+/-"))
+}
+
+
+selectOnlyAdvancedStats <- function(advanced_game_log) {
+    advanced_game_log[, 
+        .(Rk, `TS%`, `eFG%`, `ORB%`, `DRB%`, `TRB%`, `AST%`, 
+          `STL%`, `BLK%`, `TOV%`, `USG%`, ORtg, DRtg)
+    ]
 }
 
 

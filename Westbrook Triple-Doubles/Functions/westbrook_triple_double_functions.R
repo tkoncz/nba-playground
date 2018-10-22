@@ -170,16 +170,13 @@ createBreakdownOfWinLossByTDorNot <- function(dt) {
 
 
 plotPointDiffVsStatsRegressionCoeffs <- function(dt) {
-  in_game_statistics <- getListOfInGameStatistics()
+  in_game_statistics <-   c(
+    "FG", "FGA", "3P", "3PA", "ORB", "FT", "FTA", "DRB", "PTS", "AST", "TOV"
+  )
   
   data_for_lm <- dt %>% 
     copy() %>% 
     .[, mget(c("Point Difference", in_game_statistics))] %>%
-    .[, `:=`(`FG%` = NULL,
-             `3P%` = NULL,
-             `FT%` = NULL,
-             PTS   = NULL,
-             TRB   = NULL)] %>%
     .[!is.na(FGA)]
   
   lm_fit <- lm(
@@ -197,13 +194,11 @@ plotPointDiffVsStatsRegressionCoeffs <- function(dt) {
     geom_bar(stat = "identity", aes(fill = ifelse(Value > 0, "pos", "neg"))) +
     scale_fill_manual(values = c("neg" = "#EF3B24", "pos" = "#007AC1")) +
     coord_flip() +
-    labs(title = "Point Diff. impact of an extra Russ...",
+    labs(title = "Value of Russ getting an extra...",
          subtitle = "Based on the '16-17 and '17-18 regular seasons",
-         x = "",
+         x = "Final score impact",
          y = "") +
     theme_minimal() +
-    # theme(panel.grid.minor = element_blank(),
-    #       panel.grid.major = element_blank()) +
     theme(text          = element_text(size = 11, family = "OCR A Extended")) +
     theme(plot.title    = element_text(size = 18),
           plot.caption  = element_text(color = "gray60")) +
@@ -213,8 +208,8 @@ plotPointDiffVsStatsRegressionCoeffs <- function(dt) {
     filename = "Westbrook Triple-Doubles/Figures/westbrook_in_game_stats_coefficients.png",
     device = "png",
     dpi = 600,
-    width = 10,
-    height = 6
+    width = 6,
+    height = 4
   )
 }
 

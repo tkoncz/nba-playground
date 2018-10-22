@@ -1,11 +1,13 @@
 source('Westbrook Triple-Doubles/Global.R')
 
 seasons <- c(2017:2018)
+player_name <- "Russell Westbrook"
+player_id <- getPlayerIDFromName(player_name, FALSE)
 
 ## ---- download data
 westbrook_raw_data_from_br <- map(seasons, ~{
     getRawPlayerGameLogsForSeasonFromBR(
-        player_id   = "westbru01", 
+        player_id   = player_id, 
         season      = .x, 
         refetch     = FALSE,
         folder      = "Westbrook Triple-Doubles/Data")

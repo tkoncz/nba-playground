@@ -1,18 +1,93 @@
-player_ids <- getAllPlayerIDsAndPageURLS(abc = c("c", "w"))
+getRawPlayerGameLogsForSeasonFromBR <- function(player_id,
+                                                season,
+                                                refetch = FALSE,
+                                                folder) {
+    
+    file_path <- glue("{folder}/raw_{season}_game_logs_for_{player_id}.csv")
 
-getAllPlayerIDsAndPageURLS <- function(abc = letters) {
-    player_pages <- map_df(abc, ~{
-        getPageURLsForPlayersWithLastNameStartingWithLetter(.x)
-    })
+    if(refetch == TRUE | !file.exists(file_path)) {
+        message("Querying from basketball-reference.com...")
 
-    player_pages[, 
-        player_id := str_match(
-            string = player_page_link, 
-            pattern = "/players/[a-z]/([a-z]+[0-9]+).html"
-        ) %>% .[, 2]
-    ]
+        season_url <- glue("https://www.basketball-reference.com/players/w/{player_id}/gamelog/{season}")
+  
+        raw_player_game_log_for_season <- read_html(season_url) %>%
+            html_nodes("table") %>% 
+            `[[`(8) %>% 
+            html_table(header = TRUE, fill = TRUE) %>% 
+            as.data.table() %>%
+            .[, season := season]
 
-    player_pages
+        fwrite(x = raw_player_game_log_for_season, file = file_path)
+
+    } else {
+        message("Loading from existing .csv file...")
+
+        raw_player_game_log_for_season <- fread(file_path)
+    }
+
+    raw_player_game_log_for_season
+}
+
+
+getPlayerIDFromName <- function(name, return_data_table = FALSE) {
+    all_player_info <- getAllPlayerIDsAndPageURLS(
+        refetch = FALSE,
+        folder = "Westbrook Triple-Doubles/Data" 
+    )
+
+    player_info_with_name <- all_player_info[grep(name, player_name)]
+    has_multiple_matches  <- player_info_with_name[, .N] > 1 
+
+    if(return_data_table == TRUE) {
+        if(has_multiple_matches == TRUE) {
+            warning(
+                glue("Multiple players returned for criteria name ~ '{name}' ..."),
+                call. = FALSE
+            )
+        }
+        return(player_info_with_name)
+    } else {
+        player_ids <- player_info_with_name[["player_id"]]
+
+        if(has_multiple_matches == TRUE) {
+            warning(
+                glue(
+                    "Multiple players returned for criteria name ~ '{name}' ...\n",
+                    "Use return_data_table = TRUE to see complete player infos"
+                ),
+                call. = FALSE
+            )
+        }
+        return(player_ids)
+    }
+}
+
+
+getAllPlayerIDsAndPageURLS <- function(refetch = FALSE, folder) {
+    file_path <- glue("{folder}/all_player_info.csv")
+
+    if(refetch == TRUE | !file.exists(file_path)) {
+        message("Querying from basketball-reference.com...")
+        
+        all_player_info <- map_df(letters, ~{
+            getPageURLsForPlayersWithLastNameStartingWithLetter(.x)
+        }) %>%
+            .[, 
+                player_id := str_match(
+                    string = player_page_link, 
+                    pattern = "/players/[a-z]/([a-z]+[0-9]+).html"
+                ) %>% .[, 2]
+            ]
+
+        fwrite(x = all_player_info, file = file_path)
+
+    } else {
+        message("Loading from existing .csv file...")
+
+        all_player_info <- fread(file_path)
+    }
+
+    all_player_info
 }
 
 getPageURLsForPlayersWithLastNameStartingWithLetter <- function(last_name_start_letter) {
@@ -39,7 +114,8 @@ getPageURLsForPlayersWithLastNameStartingWithLetter <- function(last_name_start_
 
         player_pages <- data.table(
             "player_name"      = player_names,
-            "player_page_link" = player_page_links
+            "player_page_link" = player_page_links,
+            "player_last_name_starts_with" = last_name_start_letter
         )
     } else {
         player_pages <- data.table()

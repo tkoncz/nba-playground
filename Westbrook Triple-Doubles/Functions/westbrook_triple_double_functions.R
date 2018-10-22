@@ -1,34 +1,3 @@
-getRawPlayerGameLogsForSeasonFromBR <- function(player_id,
-                                                season,
-                                                refetch = FALSE,
-                                                folder) {
-    
-    file_path <- glue("{folder}/raw_game_log_{player_id}_{season}.csv")
-
-    if(refetch == TRUE | !file.exists(file_path)) {
-        message("Querying from basketball-reference.com...")
-
-        season_url <- glue("https://www.basketball-reference.com/players/w/{player_id}/gamelog/{season}")
-  
-        raw_player_game_log_for_season <- read_html(season_url) %>%
-            html_nodes("table") %>% 
-            `[[`(8) %>% 
-            html_table(header = TRUE, fill = TRUE) %>% 
-            as.data.table() %>%
-            .[, season := season]
-
-        fwrite(x = raw_player_game_log_for_season, file = file_path)
-
-    } else {
-        message("Loading from existing .csv file...")
-
-        raw_player_game_log_for_season <- fread(file_path)
-    }
-
-    raw_player_game_log_for_season
-}
-
-
 fixRawColumns_ <- function(westbrook_raw_data_from_br) {
   westbrook_raw_data_from_br %>% 
     setnames(c("Rk", "G",  "Date",  "Age", "Tm", "Away",
@@ -155,7 +124,7 @@ plotWinPctVsPlayerHadTDorNot <- function(won_lost_by_had_td) {
   ) %>% 
     melt(id.vars = "Win%") %>% 
     ggplot(aes(x = `Win%`, y = value, fill = variable)) +
-    geom_area(size = 0) +
+    geom_area(size = 0, position = "dodge") +
     scale_fill_manual(values = c("Triple-Double" = "#002D62", "No Triple-Double" = "#FDBB30")) +
     geom_text(
       data = last_2_yr_avg_win_pct, 

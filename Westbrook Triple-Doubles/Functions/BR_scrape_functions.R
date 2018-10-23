@@ -4,7 +4,12 @@ getPlayerIDFromName <- function(name, return_data_table = FALSE) {
         folder = "Westbrook Triple-Doubles/Data" 
     )
 
-    player_info_with_name <- all_player_info[grep(name, player_name)]
+    player_info_with_name <- all_player_info[grep(
+        pattern     = name,
+        x           = player_name,
+        ignore.case = TRUE,
+        perl        = TRUE
+    )]
     has_multiple_matches  <- player_info_with_name[, .N] > 1
     has_no_match          <- player_info_with_name[, .N] < 1
 

@@ -171,7 +171,7 @@ createBreakdownOfWinLossByTDorNot <- function(dt) {
 
 plotPointDiffVsStatsRegressionCoeffs <- function(dt) {
   in_game_statistics <-   c(
-    "FG", "FGA", "3P", "3PA", "ORB", "FT", "FTA", "DRB", "PTS", "AST", "TOV"
+    "FG", "FGA", "3P", "3PA", "ORB", "FT", "FTA", "DRB", "AST", "TOV"
   )
   
   data_for_lm <- dt %>% 

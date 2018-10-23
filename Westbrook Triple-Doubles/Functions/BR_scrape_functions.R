@@ -1,7 +1,54 @@
+getPlayerIDFromName <- function(name, return_data_table = FALSE) {
+    all_player_info <- getAllPlayerIDsAndPageURLS(
+        refetch = FALSE,
+        folder = "Westbrook Triple-Doubles/Data" 
+    )
+
+    player_info_with_name <- all_player_info[grep(name, player_name)]
+    has_multiple_matches  <- player_info_with_name[, .N] > 1
+    has_no_match          <- player_info_with_name[, .N] < 1
+
+    if(return_data_table == TRUE) {
+        if(has_multiple_matches == TRUE) {
+            warning(
+                glue("Multiple players returned for criteria name ~ '{name}' ..."),
+                call. = FALSE
+            )
+        } else if(has_no_match == TRUE) {
+            issueWarningNoPlayerMatched(name)
+        }
+        return(player_info_with_name)
+    } else {
+        player_ids <- player_info_with_name[["player_id"]]
+
+        if(has_multiple_matches == TRUE) {
+            warning(
+                glue(
+                    "Multiple players returned for criteria name ~ '{name}' ...\n",
+                    "Use return_data_table = TRUE to see complete player infos"
+                ),
+                call. = FALSE
+            )
+        } else if(has_no_match == TRUE) {
+            issueWarningNoPlayerMatched(name)
+        }
+        return(player_ids)
+    }
+}
+
+
+issueWarningNoPlayerMatched <- function(name) {
+    warning(
+        glue("No players matched for criteria name ~ '{name}' ..."),
+        call. = FALSE
+    )    
+}
+
+
 getPlayerGameLogsForSeasonFromBR <- function(player_id,
-                                                season,
-                                                refetch = FALSE,
-                                                folder) {
+                                             season,
+                                             refetch = FALSE,
+                                             folder) {
     
     file_path <- glue("{folder}/raw_{season}_game_logs_for_{player_id}.csv")
 
@@ -67,40 +114,6 @@ selectOnlyAdvancedStats <- function(advanced_game_log) {
         .(Rk, `TS%`, `eFG%`, `ORB%`, `DRB%`, `TRB%`, `AST%`, 
           `STL%`, `BLK%`, `TOV%`, `USG%`, ORtg, DRtg)
     ]
-}
-
-
-getPlayerIDFromName <- function(name, return_data_table = FALSE) {
-    all_player_info <- getAllPlayerIDsAndPageURLS(
-        refetch = FALSE,
-        folder = "Westbrook Triple-Doubles/Data" 
-    )
-
-    player_info_with_name <- all_player_info[grep(name, player_name)]
-    has_multiple_matches  <- player_info_with_name[, .N] > 1 
-
-    if(return_data_table == TRUE) {
-        if(has_multiple_matches == TRUE) {
-            warning(
-                glue("Multiple players returned for criteria name ~ '{name}' ..."),
-                call. = FALSE
-            )
-        }
-        return(player_info_with_name)
-    } else {
-        player_ids <- player_info_with_name[["player_id"]]
-
-        if(has_multiple_matches == TRUE) {
-            warning(
-                glue(
-                    "Multiple players returned for criteria name ~ '{name}' ...\n",
-                    "Use return_data_table = TRUE to see complete player infos"
-                ),
-                call. = FALSE
-            )
-        }
-        return(player_ids)
-    }
 }
 
 

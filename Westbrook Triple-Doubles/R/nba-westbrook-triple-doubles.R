@@ -33,8 +33,3 @@ plotPointDiffVsStatsRegressionCoeffs(westbrook_data_from_br)
 
 ## ---- How about stat padding?
 plotASTandTRBDistributions(westbrook_data_from_br)
-
-# westbrook_data_from_br %>%
-#     .[, .(n = .N), by = .(t = AST >= 10, TRB)] %>%
-#     ggplot(aes(x = TRB, y= n, fill = t)) +
-#         geom_density(stat = "identity", alpha = 0.5)

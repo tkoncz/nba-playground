@@ -7,9 +7,14 @@ suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(extrafont))
 
 invisible(sapply(
-    list.files(
-        path = "Westbrook Triple-Doubles/Functions", 
-        pattern = ".R", all.files = TRUE, full.names = TRUE
-    ), 
-    source
+    c(  
+      list.files(
+          path = "Westbrook Triple-Doubles/Functions", 
+          pattern = ".R", all.files = TRUE, full.names = TRUE
+      ),
+      list.files(
+          path = "General Functions",
+          pattern = ".R", all.files = TRUE, full.names = TRUE
+      )),
+      source
 ))

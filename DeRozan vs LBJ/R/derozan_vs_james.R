@@ -52,15 +52,13 @@ derozan_avgs_other_games <- games_derozan_not_against_james %>%
          TOV               = mean(TOV),
          TRB               = mean(TRB)
         )
-    ]
+    ] %>%
+    melt() %>%
+    setnames(c("Stat", "Value"))
 
 ## ----
-pointPlotTable <- getAllPointStats()
-
-plotAllDerozanVsJamesPointStats(
-    games_derozan_vs_james, derozan_avgs_other_games, pointPlotTable
-)
-    
+plotDerozanVsJamesPointStat(games_derozan_vs_james, derozan_avgs_other_games)
+        
 ## ----
 #FG, 3P, FT, TRB, AST, TOV
 derozan_summary <- rbind(
@@ -79,6 +77,6 @@ derozan_summary <- rbind(
       ), 
       by = group]
 
-
 plotBetaDistributionsForDerozanStats()
-
+## TODO: factor order...
+## TODO: sanity check on shapes, e.g. FT% does not look good

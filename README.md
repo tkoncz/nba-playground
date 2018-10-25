@@ -14,6 +14,6 @@ Throwback to see how close the '17-18 regular season finish was to grab playoff 
 ##### RUSSELL WESTBROOK AND THE VALUE OF A TRIPLE-DOUBLE  
 **Available at:** https://tomiajo.github.io/blog/russell-westbrook-and-the-value-of-a-triple-double/  
 
-Checking-in on the value of Westbrook recording a triple-double on the success of OKC.
+Checking-in on the value of Westbrook recording a triple-double on the success of OKC.  
 <br>  
 <br>

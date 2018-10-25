@@ -1,5 +1,0 @@
-library(rvest)
-library(data.table)
-library(ggplot2)
-library(glue)
-library(purrr)

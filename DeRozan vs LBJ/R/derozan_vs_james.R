@@ -71,12 +71,11 @@ derozan_summary <- rbind(
 ) %>% 
     .[, 
       .(
-        FG_alpha   = sum(FG),    FG_beta  = sum(FGA),
-        `3P_alpha` = sum(`3P`), `3P_beta` = sum(`3PA`),
-        FT_alpha   = sum(FT),    FT_beta  = sum(FTA)
+        FG_alpha   = sum(FG),    FG_beta  = sum(FGA) - sum(FG),
+        `3P_alpha` = sum(`3P`), `3P_beta` = sum(`3PA`) - sum(`3P`),
+        FT_alpha   = sum(FT),    FT_beta  = sum(FTA) - sum(FT)
       ), 
       by = group]
 
 plotBetaDistributionsForDerozanStats()
 ## TODO: factor order...
-## TODO: sanity check on shapes, e.g. FT% does not look good

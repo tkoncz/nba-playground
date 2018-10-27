@@ -253,3 +253,62 @@ fixColumnFormats_ <- function(dt) {
   
   dt
 }
+
+
+getPlayerGameLogsForPlayoffsFromBR <- function(player_id,
+                                               season,
+                                               refetch = FALSE,
+                                               folder) {
+    
+    file_path <- glue(
+        "{folder}/raw_{season}_playoffs_game_logs_for_{player_id}.csv"
+    )
+
+    if(refetch == TRUE | !file.exists(file_path)) {
+        message("Querying from basketball-reference.com...")
+
+        raw_player_game_log_for_playoffs <- glue(
+            "https://www.basketball-reference.com/players/w/{player_id}/gamelog/{season}"
+        ) %>%
+            getPlayerPlayoffGameLogTableFromHTML() %>%
+            fixColumnNamesInPlayerGameLog_()
+
+        raw_player_advanced_game_log_for_playoffs <- glue(
+            "https://www.basketball-reference.com/players/w/{player_id}/gamelog-advanced/{season}"
+        ) %>%
+            getPlayerPlayoffGameLogTableFromHTML() %>%
+            selectOnlyAdvancedStats()            
+            
+        raw_player_game_log_for_playoffs_w_advanced <- merge(
+            raw_player_game_log_for_playoffs,
+            raw_player_advanced_game_log_for_playoffs,
+            by = "Rk",
+            all.x = TRUE
+        ) %>% 
+            .[, season := season] %>% 
+            .[, G := Rk] %>%
+            .[, Rk := NULL]
+
+        fwrite(x = raw_player_game_log_for_playoffs_w_advanced, file = file_path)
+
+    } else {
+        message("Loading from existing .csv file...")
+
+        raw_player_game_log_for_playoffs_w_advanced <- fread(file_path)
+    }
+
+    raw_player_game_log_for_playoffs_w_advanced
+}
+
+
+getPlayerPlayoffGameLogTableFromHTML <- function(url) {
+    url %>%
+        read_html() %>% 
+        html_nodes(xpath = '//comment()') %>%
+        html_text() %>%
+        paste0(collapse = "")  %>%
+        read_html() %>% 
+        html_nodes(xpath = "//table") %>% 
+        html_table() %>% 
+        as.data.table()
+}

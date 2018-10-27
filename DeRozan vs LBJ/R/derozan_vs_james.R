@@ -5,6 +5,15 @@ james_player_id <- getPlayerIDFromName("Lebron James", FALSE)
 derozan_player_id <- getPlayerIDFromName("Demar Derozan", FALSE)
 
 ## ---- download data
+derozan_playoff_data_from_br <- map(seasons[1:4], ~{
+    getPlayerGameLogsForPlayoffsFromBR(
+    player_id   = derozan_player_id, 
+    season      = .x, 
+    refetch     = FALSE,
+    folder      = "DeRozan vs LBJ/Data")
+}) %>% rbindlist()
+## TODO fix playoff data to handle no results... (could apply to other scrapers as well)
+
 james_data_from_br <- map(seasons, ~{
     getPlayerGameLogsForSeasonFromBR(
         player_id   = james_player_id, 
@@ -22,10 +31,12 @@ derozan_data_from_br <- map(seasons, ~{
 }) %>% rbindlist()
 
 ## ---- fix formatting issues
+fixColumnFormats_(derozan_playoff_data_from_br)
 fixColumnFormats_(james_data_from_br)
 fixColumnFormats_(derozan_data_from_br)
 
 ## ----
+addResultColumns_(derozan_playoff_data_from_br)
 addResultColumns_(derozan_data_from_br)
     
 ## ---- 

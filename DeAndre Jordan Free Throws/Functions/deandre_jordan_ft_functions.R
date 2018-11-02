@@ -27,6 +27,7 @@ plotFreeThrowShootingBySeason <- function(player_summary_by_season, folder) {
             scale_color_manual(values = c("LAC" = "#C8102E", "DAL" = "#00538C")) +
             labs(
                 title = "DeAndre Jordan's FT shooting over the years",
+                subtitle = "Line heights represent 95% confidence intervals",
                 x = "Season",
                 y = "Free Throw %",
                 caption = "Based on regular season data since '08-09"
@@ -77,7 +78,7 @@ plotSimulatedFTPerformance <- function(simulated_FT_performance, folder,
         ) +
         geom_text(
             aes(x = dj_2019_FT - .5, y = .15), hjust = 0, vjust = 1, 
-            label = "Results at least\nmatching DeAndre's\nshooting in 2019",
+            label = "Results at least\nmatching DeAndre's\nshooting in '18-19",
             family = "OCR A Extended", color = "#002B5E", size = 3
         ) +
         geom_bar(aes(y = Career), stat = "identity", alpha = 0.75, fill = "#C8102E") +

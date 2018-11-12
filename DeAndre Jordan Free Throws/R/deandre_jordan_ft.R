@@ -43,4 +43,3 @@ plotSimulatedFTPerformance(
     simulated_FT_performance, folder = "DeAndre Jordan Free Throws/Figures",
     dj_2019_FTA, simulation_runs
 )
-

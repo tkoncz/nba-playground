@@ -19,8 +19,8 @@ opts_chunk$set(warning = FALSE)
 opts_chunk$set(message = FALSE)
 opts_chunk$set(echo    = FALSE)
 
-figures_folder_path <- "C:/Users/tkonc/Documents/nba-playground/DeAndre Jordan Free Throws/Figures"
-# figures_folder_path <- "/img"
+# figures_folder_path <- "C:/Users/tkonc/Documents/nba-playground/DeAndre Jordan Free Throws/Figures"
+figures_folder_path <- "/img"
 ```
 
 **At the time of writing this DeAndre Jordan has made 82% of his free throws (on 34 attempts) in the 2018-19 NBA regular season.**  
